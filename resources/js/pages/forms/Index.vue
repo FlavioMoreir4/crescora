@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Head, Link, router } from '@inertiajs/vue3';
+import { index, create, show, edit, destroy } from '@/routes/forms';
 import type { ColumnDef } from '@tanstack/vue-table';
 import { Plus, Pencil, Trash2 } from 'lucide-vue-next';
 import { h } from 'vue';
@@ -33,7 +34,7 @@ defineProps<{
 
 defineOptions({
     layout: {
-        breadcrumbs: [{ title: 'Formulários', href: '/forms' }],
+        breadcrumbs: [{ title: 'Formulários', href: index.url() }],
     },
 });
 
@@ -45,7 +46,7 @@ const columns: ColumnDef<Form>[] = [
             h(
                 Link,
                 {
-                    href: `/forms/${row.original.slug}`,
+                    href: show.url(row.original.slug),
                     class: 'font-medium hover:underline',
                 },
                 () => row.original.name,
@@ -105,7 +106,7 @@ const columns: ColumnDef<Form>[] = [
 
 function handleDelete(form: Form) {
     if (confirm(`Excluir formulário "${form.name}"?`)) {
-        router.delete(`/forms/${form.slug}`);
+        router.delete(destroy.url(form.slug));
     }
 }
 </script>
@@ -121,7 +122,7 @@ function handleDelete(form: Form) {
                     Gerencie os formulários de contato e coleta de dados.
                 </p>
             </div>
-            <Link href="/forms/create">
+            <Link :href="create.url()">
                 <Button>
                     <Plus class="mr-2 h-4 w-4" />
                     Novo Formulário
@@ -138,8 +139,7 @@ function handleDelete(form: Form) {
                 {
                     label: 'Editar',
                     icon: Pencil,
-                    handler: (form: Form) =>
-                        router.visit(`/forms/${form.slug}/edit`),
+                    handler: (form: Form) => router.visit(edit.url(form.slug)),
                 },
                 {
                     label: 'Excluir',

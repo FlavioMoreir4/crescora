@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Head, Link, router } from '@inertiajs/vue3';
+import { index, show, edit, destroy } from '@/routes/units';
 import { ArrowLeft, Pencil, Trash2 } from 'lucide-vue-next';
 import { Button } from '@/components/ui/button';
 import {
@@ -32,7 +33,7 @@ defineProps<{
 defineOptions({
     layout: {
         breadcrumbs: [
-            { title: 'Unidades', href: '/units' },
+            { title: 'Unidades', href: index.url() },
             { title: 'Unidade', href: '' },
         ],
     },
@@ -40,7 +41,7 @@ defineOptions({
 
 function handleDelete() {
     if (confirm(`Excluir unidade "${unit.name}"?`)) {
-        router.delete(`/units/${unit.slug}`);
+        router.delete(destroy.url(unit.slug));
     }
 }
 </script>
@@ -51,7 +52,7 @@ function handleDelete() {
     <div class="flex flex-col gap-6 p-6">
         <div class="flex items-center justify-between">
             <div class="flex items-center gap-4">
-                <Link href="/units">
+                <Link :href="index.url()">
                     <Button variant="ghost" size="icon">
                         <ArrowLeft class="h-4 w-4" />
                     </Button>
@@ -71,7 +72,7 @@ function handleDelete() {
                 </div>
             </div>
             <div class="flex items-center gap-2">
-                <Link :href="`/units/${unit.slug}/edit`">
+                <Link :href="edit.url(unit.slug)">
                     <Button variant="outline">
                         <Pencil class="mr-2 h-4 w-4" />
                         Editar
@@ -101,19 +102,27 @@ function handleDelete() {
 
                 <div>
                     <span class="text-sm font-medium">Descrição</span>
-                    <p class="text-sm text-muted-foreground">{{ unit.description }}</p>
+                    <p class="text-sm text-muted-foreground">
+                        {{ unit.description }}
+                    </p>
                 </div>
                 <div>
                     <span class="text-sm font-medium">Telefone</span>
-                    <p class="text-sm text-muted-foreground">{{ unit.phone }}</p>
+                    <p class="text-sm text-muted-foreground">
+                        {{ unit.phone }}
+                    </p>
                 </div>
                 <div>
                     <span class="text-sm font-medium">Email</span>
-                    <p class="text-sm text-muted-foreground">{{ unit.email }}</p>
+                    <p class="text-sm text-muted-foreground">
+                        {{ unit.email }}
+                    </p>
                 </div>
                 <div>
                     <span class="text-sm font-medium">Endereço</span>
-                    <p class="text-sm text-muted-foreground">{{ unit.address }}</p>
+                    <p class="text-sm text-muted-foreground">
+                        {{ unit.address }}
+                    </p>
                 </div>
                 <div>
                     <span class="text-sm font-medium">Cidade</span>
@@ -121,7 +130,9 @@ function handleDelete() {
                 </div>
                 <div>
                     <span class="text-sm font-medium">Estado</span>
-                    <p class="text-sm text-muted-foreground">{{ unit.state }}</p>
+                    <p class="text-sm text-muted-foreground">
+                        {{ unit.state }}
+                    </p>
                 </div>
                 <div>
                     <span class="text-sm font-medium">CEP</span>
@@ -129,7 +140,9 @@ function handleDelete() {
                 </div>
                 <div>
                     <span class="text-sm font-medium">Ativo</span>
-                    <p class="text-sm text-muted-foreground">{{ unit.is_active ? 'Sim' : 'Não' }}</p>
+                    <p class="text-sm text-muted-foreground">
+                        {{ unit.is_active ? 'Sim' : 'Não' }}
+                    </p>
                 </div>
             </CardContent>
         </Card>

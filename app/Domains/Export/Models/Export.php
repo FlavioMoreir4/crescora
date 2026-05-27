@@ -5,11 +5,16 @@ declare(strict_types=1);
 namespace App\Domains\Export\Models;
 
 use App\Domains\Shared\Models\BaseModel;
+use App\Domains\Shared\Models\Concerns\BelongsToTeam;
 use App\Models\User;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Prunable;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Export extends BaseModel
 {
+    use BelongsToTeam, Prunable;
+
     protected $fillable = [
         'team_id',
         'user_id',
@@ -56,5 +61,10 @@ class Export extends BaseModel
     public function scopeFailed($query)
     {
         return $query->where('status', 'failed');
+    }
+
+    public function prunable(): Builder
+    {
+        return static::where('completed_at', '<=', now()->subDays(30));
     }
 }

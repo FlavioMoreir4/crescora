@@ -6,11 +6,13 @@ use App\Domains\Shared\Http\Middleware\IdentifyTenant;
 use App\Http\Middleware\HandleAppearance;
 use App\Http\Middleware\HandleInertiaRequests;
 use App\Http\Middleware\SetTeamUrlDefaults;
+use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets;
 use Illuminate\Http\Request;
+use Inertia\Inertia;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 return Application::configure(basePath: dirname(__DIR__))
@@ -50,9 +52,19 @@ return Application::configure(basePath: dirname(__DIR__))
             ]);
         });
 
+        $exceptions->render(function (AuthorizationException $e, Request $request) {
+            if ($request->expectsJson()) {
+                return response()->json(['message' => 'Esta ação não é autorizada.'], 403);
+            }
+
+            return Inertia::render('errors/403')->toResponse($request);
+        });
+
         $exceptions->render(function (NotFoundHttpException $e, Request $request) {
             if ($request->expectsJson()) {
                 return response()->json(['message' => 'Recurso não encontrado.'], 404);
             }
+
+            return Inertia::render('errors/404')->toResponse($request);
         });
     })->create();

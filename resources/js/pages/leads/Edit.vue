@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Head, Link, router } from '@inertiajs/vue3';
+import { index, show, edit, update } from '@/routes/leads';
 import { useForm } from '@inertiajs/vue3';
 import { ArrowLeft } from 'lucide-vue-next';
 import { Button } from '@/components/ui/button';
@@ -51,10 +52,10 @@ const props = defineProps<{
 defineOptions({
     layout: (pageProps: { lead?: { name: string; id: number } }) => ({
         breadcrumbs: [
-            { title: 'Leads', href: '/leads' },
+            { title: 'Leads', href: index.url() },
             {
                 title: pageProps.lead?.name ?? '',
-                href: `/leads/${pageProps.lead?.id ?? ''}`,
+                href: show.url(pageProps.lead?.id ?? 0),
             },
             { title: 'Editar', href: '' },
         ],
@@ -71,7 +72,7 @@ const form = useForm({
 });
 
 function submit() {
-    form.put(`/leads/${props.lead.id}`, {
+    form.put(update.url(props.lead.id), {
         onSuccess: () => form.reset(),
     });
 }
@@ -82,7 +83,7 @@ function submit() {
 
     <div class="flex flex-col gap-6 p-6">
         <div class="flex items-center gap-4">
-            <Link :href="`/leads/${lead.id}`">
+            <Link :href="show.url(lead.id)">
                 <Button variant="ghost" size="icon">
                     <ArrowLeft class="h-4 w-4" />
                 </Button>
@@ -194,7 +195,7 @@ function submit() {
                     </div>
                 </CardContent>
                 <CardFooter class="flex justify-between">
-                    <Link :href="`/leads/${lead.id}`">
+                    <Link :href="show.url(lead.id)">
                         <Button variant="outline" type="button"
                             >Cancelar</Button
                         >

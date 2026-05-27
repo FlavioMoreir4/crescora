@@ -1,5 +1,10 @@
 <script setup lang="ts">
 import { Head, router } from '@inertiajs/vue3';
+import {
+    index,
+    subscribe as subscribeRoute,
+    cancel as cancelRoute,
+} from '@/routes/billing';
 import { ref } from 'vue';
 import { CreditCard, Check, X, Loader2, ArrowRight } from 'lucide-vue-next';
 import { Button } from '@/components/ui/button';
@@ -43,7 +48,7 @@ const props = defineProps<{
 
 defineOptions({
     layout: {
-        breadcrumbs: [{ title: 'Assinatura', href: '/billing' }],
+        breadcrumbs: [{ title: 'Assinatura', href: index.url() }],
     },
 });
 
@@ -79,7 +84,7 @@ const paymentLabels: Record<string, string> = {
 function subscribe(planId: number) {
     subscribing.value = true;
     router.post(
-        '/billing/subscribe',
+        subscribeRoute.url(),
         {
             plan_id: planId,
             billing_period: isYearly.value ? 'yearly' : 'monthly',
@@ -97,7 +102,7 @@ function cancel() {
     if (!confirm('Tem certeza que deseja cancelar sua assinatura?')) return;
     canceling.value = true;
     router.post(
-        '/billing/cancel',
+        cancelRoute.url(),
         {},
         {
             onFinish: () => {

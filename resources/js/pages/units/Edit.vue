@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Head, Link, router } from '@inertiajs/vue3';
 import { useForm } from '@inertiajs/vue3';
+import { index, show, edit, update } from '@/routes/units';
 import { ArrowLeft } from 'lucide-vue-next';
 import { Button } from '@/components/ui/button';
 import {
@@ -37,10 +38,10 @@ const props = defineProps<{
 defineOptions({
     layout: (pageProps: { unit?: { name: string; slug: string } }) => ({
         breadcrumbs: [
-            { title: 'Unidades', href: '/units' },
+            { title: 'Unidades', href: index.url() },
             {
                 title: pageProps.unit?.name ?? '',
-                href: `/units/${pageProps.unit?.slug ?? ''}`,
+                href: show.url(pageProps.unit?.slug ?? ''),
             },
             { title: 'Editar', href: '' },
         ],
@@ -61,7 +62,7 @@ const form = useForm({
 });
 
 function submit() {
-    form.put(`/units/${props.unit.slug}`, {
+    form.put(update.url(props.unit.slug), {
         onSuccess: () => form.reset(),
     });
 }
@@ -100,7 +101,7 @@ async function fetchAddress(cep: string) {
 
     <div class="flex flex-col gap-6 p-6">
         <div class="flex items-center gap-4">
-            <Link :href="`/units/${unit.slug}`">
+            <Link :href="show.url(unit.slug)">
                 <Button variant="ghost" size="icon">
                     <ArrowLeft class="h-4 w-4" />
                 </Button>
@@ -208,7 +209,7 @@ async function fetchAddress(cep: string) {
                         <InputError :message="form.errors.state" />
                     </div>
 
-                    <div class="space-y-2 flex items-center space-x-2">
+                    <div class="flex items-center space-y-2 space-x-2">
                         <Switch
                             id="is_active"
                             :modelValue="form.is_active"
@@ -220,7 +221,7 @@ async function fetchAddress(cep: string) {
                     </div>
                 </CardContent>
                 <CardFooter class="flex justify-between py-2">
-                    <Link :href="`/units/${unit.slug}`">
+                    <Link :href="show.url(unit.slug)">
                         <Button variant="outline" type="button"
                             >Cancelar</Button
                         >

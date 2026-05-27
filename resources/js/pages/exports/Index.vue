@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Head, Link, router } from '@inertiajs/vue3';
+import { index, store, download } from '@/routes/exports';
 import type { ColumnDef } from '@tanstack/vue-table';
 import { Plus, Download } from 'lucide-vue-next';
 import { h } from 'vue';
@@ -34,7 +35,7 @@ defineProps<{
 
 defineOptions({
     layout: {
-        breadcrumbs: [{ title: 'Exportações', href: '/exports' }],
+        breadcrumbs: [{ title: 'Exportações', href: index.url() }],
     },
 });
 
@@ -126,7 +127,7 @@ const columns: ColumnDef<ExportItem>[] = [
             return h(
                 'a',
                 {
-                    href: `/exports/${row.original.id}/download`,
+                    href: download.url(row.original.id),
                     class: 'inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline',
                 },
                 [h(Download, { class: 'h-4 w-4' }), ' Baixar'],

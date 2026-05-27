@@ -58,6 +58,8 @@ final class ExportController
 
     public function download(Export $export): StreamedResponse
     {
+        abort_if((int) $export->team_id !== TenantContext::getTeamId(), 403);
+
         \Gate::authorize('view', $export);
 
         abort_if($export->status !== 'completed', 404);

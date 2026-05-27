@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Head, Link, router } from '@inertiajs/vue3';
+import { index, create, show, edit, destroy } from '@/routes/leads';
 import type { ColumnDef } from '@tanstack/vue-table';
 import { Plus, Pencil, Trash2 } from 'lucide-vue-next';
 import { h } from 'vue';
@@ -31,7 +32,7 @@ defineProps<{
 
 defineOptions({
     layout: {
-        breadcrumbs: [{ title: 'Leads', href: '/leads' }],
+        breadcrumbs: [{ title: 'Leads', href: index.url() }],
     },
 });
 
@@ -69,7 +70,7 @@ const columns: ColumnDef<Lead>[] = [
             h(
                 Link,
                 {
-                    href: `/leads/${row.original.id}`,
+                    href: show.url(row.original.id),
                     class: 'font-medium hover:underline',
                 },
                 () => row.original.name,
@@ -114,7 +115,7 @@ const columns: ColumnDef<Lead>[] = [
 
 function handleDelete(lead: Lead) {
     if (confirm(`Excluir lead "${lead.name}"?`)) {
-        router.delete(`/leads/${lead.id}`);
+        router.delete(destroy.url(lead.id));
     }
 }
 </script>
@@ -130,7 +131,7 @@ function handleDelete(lead: Lead) {
                     Gerencie seus leads e oportunidades.
                 </p>
             </div>
-            <Link href="/leads/create">
+            <Link :href="create.url()">
                 <Button>
                     <Plus class="mr-2 h-4 w-4" />
                     Novo Lead
@@ -147,8 +148,7 @@ function handleDelete(lead: Lead) {
                 {
                     label: 'Editar',
                     icon: Pencil,
-                    handler: (lead: Lead) =>
-                        router.visit(`/leads/${lead.id}/edit`),
+                    handler: (lead: Lead) => router.visit(edit.url(lead.id)),
                 },
                 {
                     label: 'Excluir',

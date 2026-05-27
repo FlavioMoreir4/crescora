@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Head, Link, router } from '@inertiajs/vue3';
+import { index, create, store } from '@/routes/leads';
 import { useForm } from '@inertiajs/vue3';
 import { ArrowLeft } from 'lucide-vue-next';
 import { Button } from '@/components/ui/button';
@@ -40,8 +41,8 @@ const props = defineProps<{
 defineOptions({
     layout: {
         breadcrumbs: [
-            { title: 'Leads', href: '/leads' },
-            { title: 'Novo Lead', href: '/leads/create' },
+            { title: 'Leads', href: index.url() },
+            { title: 'Novo Lead', href: create.url() },
         ],
     },
 });
@@ -56,7 +57,7 @@ const form = useForm({
 });
 
 function submit() {
-    form.post('/leads', {
+    form.post(store.url(), {
         onSuccess: () => form.reset(),
     });
 }
@@ -67,7 +68,7 @@ function submit() {
 
     <div class="flex flex-col gap-6 p-6">
         <div class="flex items-center gap-4">
-            <Link href="/leads">
+            <Link :href="index.url()">
                 <Button variant="ghost" size="icon">
                     <ArrowLeft class="h-4 w-4" />
                 </Button>
@@ -179,7 +180,7 @@ function submit() {
                     </div>
                 </CardContent>
                 <CardFooter class="flex justify-between">
-                    <Link href="/leads">
+                    <Link :href="index.url()">
                         <Button variant="outline" type="button"
                             >Cancelar</Button
                         >

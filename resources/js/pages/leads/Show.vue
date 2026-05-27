@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Head, Link, router } from '@inertiajs/vue3';
+import { index, show, edit, destroy } from '@/routes/leads';
 import { ArrowLeft, Pencil, Trash2 } from 'lucide-vue-next';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -56,7 +57,7 @@ defineProps<{
 defineOptions({
     layout: {
         breadcrumbs: [
-            { title: 'Leads', href: '/leads' },
+            { title: 'Leads', href: index.url() },
             { title: 'Lead', href: '' },
         ],
     },
@@ -90,7 +91,7 @@ const statusColors: Record<string, string> = {
 
 function handleDelete() {
     if (confirm(`Excluir lead "${lead.name}"?`)) {
-        router.delete(`/leads/${lead.id}`);
+        router.delete(destroy.url(lead.id));
     }
 }
 </script>
@@ -101,7 +102,7 @@ function handleDelete() {
     <div class="flex flex-col gap-6 p-6">
         <div class="flex items-center justify-between">
             <div class="flex items-center gap-4">
-                <Link href="/leads">
+                <Link :href="index.url()">
                     <Button variant="ghost" size="icon">
                         <ArrowLeft class="h-4 w-4" />
                     </Button>
@@ -129,7 +130,7 @@ function handleDelete() {
                 </div>
             </div>
             <div class="flex items-center gap-2">
-                <Link :href="`/leads/${lead.id}/edit`">
+                <Link :href="edit.url(lead.id)">
                     <Button variant="outline">
                         <Pencil class="mr-2 h-4 w-4" />
                         Editar

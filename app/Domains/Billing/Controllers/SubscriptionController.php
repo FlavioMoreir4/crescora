@@ -24,6 +24,8 @@ final class SubscriptionController
 
     public function index(): Response
     {
+        \Gate::authorize('billing-manage');
+
         $team = request()->user()->currentTeam;
         $subscription = $team->subscription;
 
@@ -37,6 +39,8 @@ final class SubscriptionController
 
     public function store(Request $request): RedirectResponse
     {
+        \Gate::authorize('billing-manage');
+
         $validated = $request->validate([
             'plan_id' => ['required', 'exists:plans,id'],
             'billing_period' => ['required', 'in:monthly,yearly'],
@@ -75,6 +79,8 @@ final class SubscriptionController
 
     public function cancel(): RedirectResponse
     {
+        \Gate::authorize('billing-manage');
+
         $subscription = request()->user()->currentTeam->subscription;
 
         abort_unless($subscription !== null, 404);
@@ -86,6 +92,8 @@ final class SubscriptionController
 
     public function pixPayment(): JsonResponse
     {
+        \Gate::authorize('billing-manage');
+
         $subscription = request()->user()->currentTeam->subscription;
 
         abort_unless($subscription !== null, 404);

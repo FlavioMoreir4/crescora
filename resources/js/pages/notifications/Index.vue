@@ -1,6 +1,12 @@
 <script setup lang="ts">
 import { Head, router } from '@inertiajs/vue3';
 import {
+    index,
+    markAsRead as markAsReadRoute,
+    markAllAsRead,
+} from '@/routes/notifications';
+import { show as leadShow } from '@/routes/leads';
+import {
     Bell,
     CheckCheck,
     UserPlus,
@@ -46,7 +52,7 @@ const props = defineProps<{
 
 defineOptions({
     layout: {
-        breadcrumbs: [{ title: 'Notificações', href: '/notifications' }],
+        breadcrumbs: [{ title: 'Notificações', href: index.url() }],
     },
 });
 
@@ -94,26 +100,26 @@ function getIcon(type: string): typeof Bell {
 function handleClick(notification: NotificationItem): void {
     if (!notification.read_at) {
         router.post(
-            `/notifications/${notification.id}/read`,
+            markAsReadRoute.url(notification.id),
             {},
             {
                 preserveScroll: true,
                 onSuccess: () => {
                     if (notification.data.lead_id) {
-                        router.visit(`/leads/${notification.data.lead_id}`);
+                        router.visit(leadShow.url(notification.data.lead_id));
                     }
                 },
             },
         );
     } else if (notification.data.lead_id) {
-        router.visit(`/leads/${notification.data.lead_id}`);
+        router.visit(leadShow.url(notification.data.lead_id));
     }
 }
 
 function markAsRead(notification: NotificationItem): void {
     if (!notification.read_at) {
         router.post(
-            `/notifications/${notification.id}/read`,
+            markAsReadRoute.url(notification.id),
             {},
             {
                 preserveScroll: true,
@@ -124,7 +130,7 @@ function markAsRead(notification: NotificationItem): void {
 
 function markAllAsRead(): void {
     router.post(
-        '/notifications/mark-all-read',
+        markAllAsRead.url(),
         {},
         {
             preserveScroll: true,
@@ -133,7 +139,7 @@ function markAllAsRead(): void {
 }
 
 function goToPage(page: number): void {
-    router.visit(`/notifications?page=${page}`, {
+    router.visit(index.url({ query: { page: page.toString() } }), {
         preserveScroll: true,
     });
 }

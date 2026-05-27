@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Head, Link, router } from '@inertiajs/vue3';
+import { index, show, edit, destroy } from '@/routes/forms';
 import { ArrowLeft, Pencil, Trash2, Eye } from 'lucide-vue-next';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -48,7 +49,7 @@ const props = defineProps<{
 defineOptions({
     layout: (pageProps: { form?: { name: string } }) => ({
         breadcrumbs: [
-            { title: 'Formulários', href: '/forms' },
+            { title: 'Formulários', href: index.url() },
             { title: pageProps.form?.name ?? '', href: '' },
         ],
     }),
@@ -71,7 +72,7 @@ const fieldTypeLabels: Record<string, string> = {
 
 function handleDelete() {
     if (confirm(`Excluir formulário "${form.name}"?`)) {
-        router.delete(`/forms/${form.slug}`);
+        router.delete(destroy.url(form.slug));
     }
 }
 </script>
@@ -82,7 +83,7 @@ function handleDelete() {
     <div class="flex flex-col gap-6 p-6">
         <div class="flex items-center justify-between">
             <div class="flex items-center gap-4">
-                <Link href="/forms">
+                <Link :href="index.url()">
                     <Button variant="ghost" size="icon">
                         <ArrowLeft class="h-4 w-4" />
                     </Button>
@@ -115,13 +116,13 @@ function handleDelete() {
                 </div>
             </div>
             <div class="flex items-center gap-2">
-                <Link :href="`/forms/${form.slug}/preview`">
+                <Link :href="show.url(form.slug) + '/preview'">
                     <Button variant="outline">
                         <Eye class="mr-2 h-4 w-4" />
                         Visualizar
                     </Button>
                 </Link>
-                <Link :href="`/forms/${form.slug}/edit`">
+                <Link :href="edit.url(form.slug)">
                     <Button variant="outline">
                         <Pencil class="mr-2 h-4 w-4" />
                         Editar

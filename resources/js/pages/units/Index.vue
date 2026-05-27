@@ -1,21 +1,22 @@
 <script setup lang="ts">
 import { Head, Link, router } from '@inertiajs/vue3';
+import { index, create, show, edit, destroy } from '@/routes/units';
 import { h, ref } from 'vue';
 import type { ColumnDef } from '@tanstack/vue-table';
 import { Plus, Pencil, Trash2 } from 'lucide-vue-next';
 import { Button } from '@/components/ui/button';
 import DataTable from '@/components/DataTable.vue';
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from '@/components/ui/alert-dialog'
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+    AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 
 interface Unit {
     id: number;
@@ -47,7 +48,7 @@ defineProps<{
 
 defineOptions({
     layout: {
-        breadcrumbs: [{ title: 'Unidades', href: '/units' }],
+        breadcrumbs: [{ title: 'Unidades', href: index.url() }],
     },
 });
 
@@ -63,7 +64,7 @@ const columns: ColumnDef<Unit>[] = [
             h(
                 Link,
                 {
-                    href: `/units/${row.original.slug}`,
+                    href: show.url(row.original.slug),
                     class: 'font-medium hover:underline',
                 },
                 () => row.original.name,
@@ -71,14 +72,14 @@ const columns: ColumnDef<Unit>[] = [
     },
     { accessorKey: 'slug', header: 'Slug' },
     {
-        accessorKey: 'city_state', header: 'Cidade / Estado',
-        cell: ({ row }) =>
-            `${row.original.city}, ${row.original.state}`,
+        accessorKey: 'city_state',
+        header: 'Cidade / Estado',
+        cell: ({ row }) => `${row.original.city}, ${row.original.state}`,
     },
     {
-        accessorKey: 'is_active', header: 'Ativo',
-        cell: ({ row }) =>
-            row.original.is_active ? 'Sim' : 'Não',
+        accessorKey: 'is_active',
+        header: 'Ativo',
+        cell: ({ row }) => (row.original.is_active ? 'Sim' : 'Não'),
     },
     {
         accessorKey: 'created_at',
@@ -97,7 +98,7 @@ function handleDelete(unit: Unit) {
 
 function handleConfirmDelete() {
     if (unitToDelete.value) {
-        router.delete(`/units/${unitToDelete.value.slug}`);
+        router.delete(destroy.url(unitToDelete.value.slug));
     }
 
     unitToDelete.value = null;
@@ -116,7 +117,7 @@ function handleConfirmDelete() {
                     Gerencie as unidades e franquias.
                 </p>
             </div>
-            <Link href="/units/create">
+            <Link :href="create.url()">
                 <Button>
                     <Plus class="mr-2 h-4 w-4" />
                     Nova Unidade
@@ -126,18 +127,24 @@ function handleConfirmDelete() {
 
         <AlertDialog :open="alertDialogOpen">
             <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>{{ alertDialogMessage }}</AlertDialogTitle>
-                <AlertDialogDescription>
-                  Essa ação não pode ser desfeita.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel @click="alertDialogOpen = false">Cancel</AlertDialogCancel>
-                <AlertDialogAction @click="handleConfirmDelete(unit)">Continue</AlertDialogAction>
-              </AlertDialogFooter>
+                <AlertDialogHeader>
+                    <AlertDialogTitle>{{
+                        alertDialogMessage
+                    }}</AlertDialogTitle>
+                    <AlertDialogDescription>
+                        Essa ação não pode ser desfeita.
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                    <AlertDialogCancel @click="alertDialogOpen = false"
+                        >Cancel</AlertDialogCancel
+                    >
+                    <AlertDialogAction @click="handleConfirmDelete(unit)"
+                        >Continue</AlertDialogAction
+                    >
+                </AlertDialogFooter>
             </AlertDialogContent>
-          </AlertDialog>
+        </AlertDialog>
 
         <DataTable
             :columns="columns"
@@ -148,7 +155,7 @@ function handleConfirmDelete() {
                 {
                     label: 'Editar',
                     icon: Pencil,
-                    handler: (u: Unit) => router.visit(`/units/${u.slug}/edit`),
+                    handler: (u: Unit) => router.visit(edit.url(u.slug)),
                 },
                 {
                     label: 'Excluir',

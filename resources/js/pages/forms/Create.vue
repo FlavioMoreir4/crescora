@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Head, Link, router } from '@inertiajs/vue3';
 import { useForm } from '@inertiajs/vue3';
+import { index, create, store } from '@/routes/forms';
 import { ArrowLeft, Plus, Trash2, GripVertical } from 'lucide-vue-next';
 import { ref } from 'vue';
 import { Button } from '@/components/ui/button';
@@ -56,8 +57,8 @@ const fieldTypeLabels: Record<string, string> = {
 defineOptions({
     layout: {
         breadcrumbs: [
-            { title: 'Formulários', href: '/forms' },
-            { title: 'Novo Formulário', href: '/forms/create' },
+            { title: 'Formulários', href: index.url() },
+            { title: 'Novo Formulário', href: create.url() },
         ],
     },
 });
@@ -123,7 +124,7 @@ function submit() {
         })),
     };
 
-    form.post('/forms', {
+    form.post(store.url(), {
         data: formData,
         onSuccess: () => form.reset(),
     });
@@ -135,7 +136,7 @@ function submit() {
 
     <div class="flex flex-col gap-6 p-6">
         <div class="flex items-center gap-4">
-            <Link href="/forms">
+            <Link :href="index.url()">
                 <Button variant="ghost" size="icon">
                     <ArrowLeft class="h-4 w-4" />
                 </Button>
@@ -331,7 +332,7 @@ function submit() {
 
             <Card class="max-w-3xl">
                 <CardFooter class="flex justify-between">
-                    <Link href="/forms">
+                    <Link :href="index.url()">
                         <Button variant="outline" type="button"
                             >Cancelar</Button
                         >

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Head, Link, router } from '@inertiajs/vue3';
 import { useForm } from '@inertiajs/vue3';
+import { index, show, edit, update } from '@/routes/forms';
 import { ArrowLeft, Plus, Trash2, GripVertical } from 'lucide-vue-next';
 import { ref, computed } from 'vue';
 import { Button } from '@/components/ui/button';
@@ -78,10 +79,10 @@ const fieldTypeLabels: Record<string, string> = {
 defineOptions({
     layout: (pageProps: { form?: { name: string; slug: string } }) => ({
         breadcrumbs: [
-            { title: 'Formulários', href: '/forms' },
+            { title: 'Formulários', href: index.url() },
             {
                 title: pageProps.form?.name ?? '',
-                href: `/forms/${pageProps.form?.slug ?? ''}`,
+                href: show.url(pageProps.form?.slug ?? ''),
             },
             { title: 'Editar', href: '' },
         ],
@@ -165,7 +166,7 @@ function submit() {
         })),
     };
 
-    form.put(`/forms/${props.form.slug}`, {
+    form.put(update.url(props.form.slug), {
         data: formData,
     });
 }
@@ -176,7 +177,7 @@ function submit() {
 
     <div class="flex flex-col gap-6 p-6">
         <div class="flex items-center gap-4">
-            <Link :href="`/forms/${form.slug}`">
+            <Link :href="show.url(form.slug)">
                 <Button variant="ghost" size="icon">
                     <ArrowLeft class="h-4 w-4" />
                 </Button>
@@ -372,7 +373,7 @@ function submit() {
 
             <Card class="max-w-3xl">
                 <CardFooter class="flex justify-between">
-                    <Link :href="`/forms/${form.slug}`">
+                    <Link :href="show.url(form.slug)">
                         <Button variant="outline" type="button"
                             >Cancelar</Button
                         >

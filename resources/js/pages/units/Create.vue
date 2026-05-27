@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Head, Link, router } from '@inertiajs/vue3';
 import { useForm } from '@inertiajs/vue3';
+import { index, create, store } from '@/routes/units';
 import { ArrowLeft } from 'lucide-vue-next';
 import { Button } from '@/components/ui/button';
 import {
@@ -16,12 +17,11 @@ import { Label } from '@/components/ui/label';
 import InputError from '@/components/InputError.vue';
 import { Switch } from '@/components/ui/switch';
 
-
 defineOptions({
     layout: {
         breadcrumbs: [
-            { title: 'Unidades', href: '/units' },
-            { title: 'Nova Unidade', href: '/units/create' },
+            { title: 'Unidades', href: index.url() },
+            { title: 'Nova Unidade', href: create.url() },
         ],
     },
 });
@@ -40,7 +40,7 @@ const form = useForm({
 });
 
 function submit() {
-    form.post('/units', {
+    form.post(store.url(), {
         onSuccess: () => form.reset(),
     });
 }
@@ -80,7 +80,7 @@ async function fetchAddress(cep: string) {
 
     <div class="flex flex-col gap-6 p-6">
         <div class="flex items-center gap-4">
-            <Link href="/units">
+            <Link :href="index.url()">
                 <Button variant="ghost" size="icon">
                     <ArrowLeft class="h-4 w-4" />
                 </Button>
@@ -186,7 +186,7 @@ async function fetchAddress(cep: string) {
                         <InputError :message="form.errors.state" />
                     </div>
 
-                    <div class="space-y-2 flex items-center space-x-2">
+                    <div class="flex items-center space-y-2 space-x-2">
                         <Switch
                             id="is_active"
                             :modelValue="form.is_active"
@@ -197,7 +197,7 @@ async function fetchAddress(cep: string) {
                     </div>
                 </CardContent>
                 <CardFooter class="flex justify-between py-2">
-                    <Link href="/units">
+                    <Link :href="index.url()">
                         <Button variant="outline" type="button"
                             >Cancelar</Button
                         >

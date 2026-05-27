@@ -15,6 +15,8 @@ abstract class BasePolicy
 {
     use HandlesAuthorization;
 
+    protected string $resource = '';
+
     protected function requireTeam(): void
     {
         if (TenantContext::getTeamId() === null) {
@@ -77,5 +79,37 @@ abstract class BasePolicy
     protected function deny(string $message = 'Esta ação não é autorizada.'): void
     {
         throw UnauthorizedException::forPermissions([$message]);
+    }
+
+    public function viewAny(?User $user): bool
+    {
+        $this->requireTeam();
+
+        return $this->hasPermission("{$this->resource}.viewAny");
+    }
+
+    public function view(?User $user, Model $model): bool
+    {
+        return $this->belongsToTeam($model)
+            && $this->hasPermission("{$this->resource}.view");
+    }
+
+    public function create(?User $user): bool
+    {
+        $this->requireTeam();
+
+        return $this->hasPermission("{$this->resource}.create");
+    }
+
+    public function update(?User $user, Model $model): bool
+    {
+        return $this->belongsToTeam($model)
+            && $this->hasPermission("{$this->resource}.update");
+    }
+
+    public function delete(?User $user, Model $model): bool
+    {
+        return $this->belongsToTeam($model)
+            && $this->hasPermission("{$this->resource}.delete");
     }
 }

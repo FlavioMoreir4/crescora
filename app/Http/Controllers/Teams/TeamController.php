@@ -35,6 +35,8 @@ class TeamController extends Controller
      */
     public function store(SaveTeamRequest $request, CreateTeam $createTeam): RedirectResponse
     {
+        Gate::authorize('create', Team::class);
+
         $team = $createTeam->handle($request->user(), $request->validated('name'));
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Team created.')]);
@@ -47,6 +49,8 @@ class TeamController extends Controller
      */
     public function edit(Request $request, Team $team): Response
     {
+        Gate::authorize('update', $team);
+
         $user = $request->user();
 
         return Inertia::render('teams/Edit', [
