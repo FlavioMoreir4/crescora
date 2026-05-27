@@ -1,6 +1,14 @@
 <script setup lang="ts">
 import { Link, usePage } from '@inertiajs/vue3';
-import { BookOpen, FolderGit2, LayoutGrid } from 'lucide-vue-next';
+import {
+    BookOpen,
+    Building2,
+    CreditCard,
+    FileText,
+    FolderGit2,
+    LayoutGrid,
+    Users,
+} from 'lucide-vue-next';
 import { computed } from 'vue';
 import AppLogo from '@/components/AppLogo.vue';
 import NavFooter from '@/components/NavFooter.vue';
@@ -17,6 +25,10 @@ import {
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
 import { dashboard } from '@/routes';
+import { index as formsIndex } from '@/routes/forms';
+import { index as leadsIndex } from '@/routes/leads';
+import { index as unitsIndex } from '@/routes/units';
+import { index as billingIndex } from '@/routes/billing';
 import type { NavItem } from '@/types';
 
 const page = usePage();
@@ -30,6 +42,26 @@ const mainNavItems = computed<NavItem[]>(() => [
         title: 'Dashboard',
         href: dashboardUrl.value,
         icon: LayoutGrid,
+    },
+    {
+        title: 'Leads',
+        href: leadsIndex().url,
+        icon: Users,
+    },
+    {
+        title: 'Unidades',
+        href: unitsIndex().url,
+        icon: Building2,
+    },
+    {
+        title: 'Formulários',
+        href: formsIndex().url,
+        icon: FileText,
+    },
+    {
+        title: 'Assinatura',
+        href: billingIndex().url,
+        icon: CreditCard,
     },
 ]);
 

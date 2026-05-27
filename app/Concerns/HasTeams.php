@@ -2,6 +2,7 @@
 
 namespace App\Concerns;
 
+use App\Domains\Shared\Context\TenantContext;
 use App\Enums\TeamPermission;
 use App\Enums\TeamRole;
 use App\Models\Membership;
@@ -88,6 +89,7 @@ trait HasTeams
         $this->update(['current_team_id' => $team->id]);
         $this->setRelation('currentTeam', $team);
 
+        TenantContext::setTeamId($team->id);
         URL::defaults(['current_team' => $team->slug]);
 
         return true;

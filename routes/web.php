@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\Teams\TeamInvitationController;
 use App\Http\Middleware\EnsureTeamMembership;
 use Illuminate\Support\Facades\Route;
@@ -9,7 +10,7 @@ Route::inertia('/', 'Welcome')->name('home');
 Route::prefix('{current_team}')
     ->middleware(['auth', 'verified', EnsureTeamMembership::class])
     ->group(function () {
-        Route::inertia('dashboard', 'Dashboard')->name('dashboard');
+        Route::get('dashboard', DashboardController::class)->name('dashboard');
     });
 
 Route::middleware(['auth'])->group(function () {
@@ -17,3 +18,9 @@ Route::middleware(['auth'])->group(function () {
 });
 
 require __DIR__.'/settings.php';
+require __DIR__.'/modules/units.php';
+require __DIR__.'/modules/forms.php';
+require __DIR__.'/modules/leads.php';
+require __DIR__.'/modules/exports.php';
+require __DIR__.'/modules/notifications.php';
+require __DIR__.'/modules/billing.php';

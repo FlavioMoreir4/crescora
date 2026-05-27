@@ -2,6 +2,7 @@ import inertia from '@inertiajs/vite';
 import { wayfinder } from '@laravel/vite-plugin-wayfinder';
 import tailwindcss from '@tailwindcss/vite';
 import vue from '@vitejs/plugin-vue';
+import vueDevTools from 'vite-plugin-vue-devtools';
 import laravel from 'laravel-vite-plugin';
 import { bunny } from 'laravel-vite-plugin/fonts';
 import { defineConfig } from 'vite';
@@ -19,6 +20,10 @@ export default defineConfig({
         }),
         inertia(),
         tailwindcss(),
+        vueDevTools({
+            launchEditor: 'antigravity',
+            appendTo: 'resources/js/app.ts',
+        }),
         vue({
             template: {
                 transformAssetUrls: {

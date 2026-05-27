@@ -28,6 +28,13 @@ return [
         'region' => env('AWS_DEFAULT_REGION', 'us-east-1'),
     ],
 
+    'asaas' => [
+        'sandbox' => env('ASAAS_SANDBOX', true),
+        'sandbox_key' => env('ASAAS_SANDBOX_API_KEY'),
+        'prod_key' => env('ASAAS_PROD_API_KEY'),
+        'webhook_secret' => env('ASAAS_WEBHOOK_SECRET'),
+    ],
+
     'slack' => [
         'notifications' => [
             'bot_user_oauth_token' => env('SLACK_BOT_USER_OAUTH_TOKEN'),

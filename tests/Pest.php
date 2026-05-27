@@ -1,6 +1,8 @@
 <?php
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\Domains\Shared\BaseDomainTestCase;
+use Tests\Domains\Shared\BaseFeatureTest;
 use Tests\TestCase;
 
 /*
@@ -17,6 +19,9 @@ use Tests\TestCase;
 pest()->extend(TestCase::class)
     ->use(RefreshDatabase::class)
     ->in('Feature');
+
+uses(BaseDomainTestCase::class)->in('Domains');
+uses(BaseFeatureTest::class)->in('Domains/*/Feature');
 
 /*
 |--------------------------------------------------------------------------
