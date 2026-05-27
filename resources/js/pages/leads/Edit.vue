@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { Head, Link, router } from '@inertiajs/vue3';
-import { index, show, edit, update } from '@/routes/leads';
+import { Head, Link } from '@inertiajs/vue3';
 import { useForm } from '@inertiajs/vue3';
-import { ArrowLeft } from 'lucide-vue-next';
+import { ArrowLeft, Plus, Trash2 } from 'lucide-vue-next';
+import { ref } from 'vue';
+import InputError from '@/components/InputError.vue';
 import { Button } from '@/components/ui/button';
 import {
     Card,
@@ -21,7 +22,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
-import InputError from '@/components/InputError.vue';
+import { index, show, update } from '@/routes/leads';
 
 interface StatusOption {
     value: string;
@@ -33,20 +34,36 @@ interface UnitOption {
     name: string;
 }
 
+interface MemberOption {
+    id: number;
+    name: string;
+}
+
 interface Lead {
     id: number;
     name: string;
     email: string | null;
     phone: string | null;
+    document: string | null;
+    source: string | null;
+    data: Record<string, unknown> | null;
     status: string;
     unit_id: number | null;
     notes: string | null;
+    owner: MemberOption | null;
+}
+
+interface DataEntry {
+    _id: number;
+    key: string;
+    value: string;
 }
 
 const props = defineProps<{
     lead: Lead;
     statuses: StatusOption[];
     units: UnitOption[];
+    members: MemberOption[];
 }>();
 
 defineOptions({
@@ -62,19 +79,72 @@ defineOptions({
     }),
 });
 
+let nextDataEntryId = 1;
+
+const dataEntries = ref<DataEntry[]>(
+    Object.entries(props.lead.data ?? {}).length > 0
+        ? Object.entries(props.lead.data ?? {}).map(([key, value]) => ({
+              _id: nextDataEntryId++,
+              key,
+              value:
+                  value === null || value === undefined
+                      ? ''
+                      : Array.isArray(value)
+                        ? value.map((item) => String(item)).join(', ')
+                        : String(value),
+          }))
+        : [
+              {
+                  _id: nextDataEntryId++,
+                  key: '',
+                  value: '',
+              },
+          ],
+);
+
 const form = useForm({
     name: props.lead.name,
     email: props.lead.email || '',
     phone: props.lead.phone || '',
+    document: props.lead.document || '',
     status: props.lead.status,
     unit_id: (props.lead.unit_id ?? '') as string | number,
+    owner_id: (props.lead.owner?.id ?? '') as string | number,
     notes: props.lead.notes || '',
 });
 
-function submit() {
-    form.put(update.url(props.lead.id), {
-        onSuccess: () => form.reset(),
+function addDataEntry(): void {
+    dataEntries.value.push({
+        _id: nextDataEntryId++,
+        key: '',
+        value: '',
     });
+}
+
+function removeDataEntry(id: number): void {
+    if (dataEntries.value.length > 1) {
+        dataEntries.value = dataEntries.value.filter((entry) => entry._id !== id);
+    }
+}
+
+function buildLeadData(): Record<string, string> {
+    return Object.fromEntries(
+        dataEntries.value
+            .filter((entry) => entry.key.trim() !== '')
+            .map((entry) => [entry.key.trim(), entry.value]),
+    );
+}
+
+function submit() {
+    form
+        .transform((data) => ({
+            ...data,
+            data: buildLeadData(),
+        }))
+        .put(update.url(props.lead.id), {
+            preserveScroll: true,
+            onSuccess: () => form.reset(),
+        });
 }
 </script>
 
@@ -137,6 +207,16 @@ function submit() {
                         </div>
                     </div>
 
+                    <div class="space-y-2">
+                        <Label for="document">Documento</Label>
+                        <Input
+                            id="document"
+                            v-model="form.document"
+                            placeholder="CPF ou CNPJ"
+                        />
+                        <InputError :message="form.errors.document" />
+                    </div>
+
                     <div class="grid gap-4 md:grid-cols-2">
                         <div class="space-y-2">
                             <Label for="status">Status</Label>
@@ -184,6 +264,30 @@ function submit() {
                     </div>
 
                     <div class="space-y-2">
+                        <Label for="owner_id">Responsável</Label>
+                        <Select v-model="form.owner_id">
+                            <SelectTrigger id="owner_id">
+                                <SelectValue
+                                    placeholder="Selecione um responsável"
+                                />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem :value="null">
+                                    Sem responsável
+                                </SelectItem>
+                                <SelectItem
+                                    v-for="member in members"
+                                    :key="member.id"
+                                    :value="member.id"
+                                >
+                                    {{ member.name }}
+                                </SelectItem>
+                            </SelectContent>
+                        </Select>
+                        <InputError :message="form.errors.owner_id" />
+                    </div>
+
+                    <div class="space-y-2">
                         <Label for="notes">Observações</Label>
                         <textarea
                             id="notes"
@@ -193,6 +297,67 @@ function submit() {
                         />
                         <InputError :message="form.errors.notes" />
                     </div>
+
+                    <Card>
+                        <CardHeader class="flex flex-row items-center justify-between">
+                            <div>
+                                <CardTitle>Dados adicionais</CardTitle>
+                                <CardDescription>
+                                    Campos dinâmicos captados pelo formulário ou
+                                    adicionados manualmente.
+                                </CardDescription>
+                            </div>
+                            <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                @click="addDataEntry"
+                            >
+                                <Plus class="mr-2 h-4 w-4" />
+                                Adicionar campo
+                            </Button>
+                        </CardHeader>
+                        <CardContent class="space-y-4">
+                            <div
+                                v-for="entry in dataEntries"
+                                :key="entry._id"
+                                class="grid gap-3 rounded-lg border p-4 md:grid-cols-[1fr_1.5fr_auto]"
+                            >
+                                <div class="space-y-2">
+                                    <Label :for="`data-key-${entry._id}`">
+                                        Chave
+                                    </Label>
+                                    <Input
+                                        :id="`data-key-${entry._id}`"
+                                        v-model="entry.key"
+                                        placeholder="cidade"
+                                    />
+                                </div>
+                                <div class="space-y-2">
+                                    <Label :for="`data-value-${entry._id}`">
+                                        Valor
+                                    </Label>
+                                    <Input
+                                        :id="`data-value-${entry._id}`"
+                                        v-model="entry.value"
+                                        placeholder="São Paulo"
+                                    />
+                                </div>
+                                <div class="flex items-end">
+                                    <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="sm"
+                                        class="text-destructive"
+                                        :disabled="dataEntries.length <= 1"
+                                        @click="removeDataEntry(entry._id)"
+                                    >
+                                        <Trash2 class="h-4 w-4" />
+                                    </Button>
+                                </div>
+                            </div>
+                        </CardContent>
+                    </Card>
                 </CardContent>
                 <CardFooter class="flex justify-between">
                     <Link :href="show.url(lead.id)">

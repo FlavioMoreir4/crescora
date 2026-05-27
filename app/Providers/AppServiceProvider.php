@@ -4,6 +4,10 @@ namespace App\Providers;
 
 use App\Domains\Billing\Contracts\BillingGatewayInterface;
 use App\Domains\Billing\Gateways\AsaasGateway;
+use App\Domains\Billing\Models\Subscription;
+use App\Domains\Billing\Policies\SubscriptionPolicy;
+use App\Domains\Export\Models\Export;
+use App\Domains\Export\Policies\ExportPolicy;
 use App\Domains\Forms\Models\Form;
 use App\Domains\Forms\Policies\FormPolicy;
 use App\Domains\Leads\Events\LeadCreated;
@@ -16,6 +20,7 @@ use App\Domains\Leads\Observers\LeadObserver;
 use App\Domains\Leads\Policies\LeadPolicy;
 use App\Domains\Units\Models\Unit;
 use App\Domains\Units\Policies\UnitPolicy;
+use App\Models\User;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
@@ -44,9 +49,17 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->configureDefaults();
+        $this->registerAuthorization();
         $this->registerPolicies();
         $this->registerObservers();
         $this->registerEvents();
+    }
+
+    protected function registerAuthorization(): void
+    {
+        Gate::before(function (?User $user): ?bool {
+            return $user?->isSystemAdmin() ? true : null;
+        });
     }
 
     protected function registerPolicies(): void
@@ -55,6 +68,7 @@ class AppServiceProvider extends ServiceProvider
         Gate::policy(Form::class, FormPolicy::class);
         Gate::policy(Lead::class, LeadPolicy::class);
         Gate::policy(Export::class, ExportPolicy::class);
+        Gate::policy(Subscription::class, SubscriptionPolicy::class);
     }
 
     protected function registerObservers(): void

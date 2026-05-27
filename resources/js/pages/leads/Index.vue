@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import { Head, Link, router } from '@inertiajs/vue3';
-import { index, create, show, edit, destroy } from '@/routes/leads';
 import type { ColumnDef } from '@tanstack/vue-table';
 import { Plus, Pencil, Trash2 } from 'lucide-vue-next';
-import { h } from 'vue';
+import { h, ref } from 'vue';
+import ConfirmActionDialog from '@/components/ConfirmActionDialog.vue';
 import DataTable from '@/components/DataTable.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { index, create, show, edit, destroy } from '@/routes/leads';
 
 interface Lead {
     id: number;
@@ -35,6 +36,9 @@ defineOptions({
         breadcrumbs: [{ title: 'Leads', href: index.url() }],
     },
 });
+
+const deleteDialogOpen = ref(false);
+const leadToDelete = ref<Lead | null>(null);
 
 const statusColors: Record<string, string> = {
     new: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300',
@@ -113,10 +117,18 @@ const columns: ColumnDef<Lead>[] = [
     },
 ];
 
-function handleDelete(lead: Lead) {
-    if (confirm(`Excluir lead "${lead.name}"?`)) {
-        router.delete(destroy.url(lead.id));
+function handleDelete(lead: Lead): void {
+    leadToDelete.value = lead;
+    deleteDialogOpen.value = true;
+}
+
+function confirmDelete(): void {
+    if (!leadToDelete.value) {
+        return;
     }
+
+    router.delete(destroy.url(leadToDelete.value.id));
+    leadToDelete.value = null;
 }
 </script>
 
@@ -158,6 +170,18 @@ function handleDelete(lead: Lead) {
                 },
             ]"
             empty-message="Nenhum lead encontrado. Crie seu primeiro lead!"
+        />
+
+        <ConfirmActionDialog
+            v-model:open="deleteDialogOpen"
+            :title="
+                leadToDelete
+                    ? `Excluir lead '${leadToDelete.name}'?`
+                    : 'Excluir lead?'
+            "
+            description="Essa ação não pode ser desfeita."
+            confirm-label="Excluir"
+            @confirm="confirmDelete"
         />
     </div>
 </template>

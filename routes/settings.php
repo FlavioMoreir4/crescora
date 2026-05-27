@@ -39,6 +39,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('settings/teams/{team}/switch', [TeamController::class, 'switch'])->name('teams.switch');
 
         Route::patch('settings/teams/{team}/members/{user}', [TeamMemberController::class, 'update'])->name('teams.members.update');
+        Route::patch('settings/teams/{team}/members/{user}/resource-accesses', [TeamMemberController::class, 'updateResourceAccess'])->name('teams.members.resources.update');
         Route::delete('settings/teams/{team}/members/{user}', [TeamMemberController::class, 'destroy'])->name('teams.members.destroy');
 
         Route::post('settings/teams/{team}/invitations', [TeamInvitationController::class, 'store'])->name('teams.invitations.store');

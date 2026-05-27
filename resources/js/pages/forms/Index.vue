@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import { Head, Link, router } from '@inertiajs/vue3';
-import { index, create, show, edit, destroy } from '@/routes/forms';
 import type { ColumnDef } from '@tanstack/vue-table';
 import { Plus, Pencil, Trash2 } from 'lucide-vue-next';
-import { h } from 'vue';
+import { h, ref } from 'vue';
+import ConfirmActionDialog from '@/components/ConfirmActionDialog.vue';
 import DataTable from '@/components/DataTable.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { index, create, show, edit, destroy } from '@/routes/forms';
 
 interface Form {
     id: number;
@@ -37,6 +38,9 @@ defineOptions({
         breadcrumbs: [{ title: 'Formulários', href: index.url() }],
     },
 });
+
+const deleteDialogOpen = ref(false);
+const formToDelete = ref<Form | null>(null);
 
 const columns: ColumnDef<Form>[] = [
     {
@@ -104,10 +108,18 @@ const columns: ColumnDef<Form>[] = [
     },
 ];
 
-function handleDelete(form: Form) {
-    if (confirm(`Excluir formulário "${form.name}"?`)) {
-        router.delete(destroy.url(form.slug));
+function handleDelete(form: Form): void {
+    formToDelete.value = form;
+    deleteDialogOpen.value = true;
+}
+
+function confirmDelete(): void {
+    if (!formToDelete.value) {
+        return;
     }
+
+    router.delete(destroy.url(formToDelete.value.slug));
+    formToDelete.value = null;
 }
 </script>
 
@@ -149,6 +161,18 @@ function handleDelete(form: Form) {
                 },
             ]"
             empty-message="Nenhum formulário encontrado. Crie seu primeiro formulário!"
+        />
+
+        <ConfirmActionDialog
+            v-model:open="deleteDialogOpen"
+            :title="
+                formToDelete
+                    ? `Excluir formulário '${formToDelete.name}'?`
+                    : 'Excluir formulário?'
+            "
+            description="Essa ação não pode ser desfeita."
+            confirm-label="Excluir"
+            @confirm="confirmDelete"
         />
     </div>
 </template>

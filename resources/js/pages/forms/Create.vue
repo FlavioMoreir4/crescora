@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { Head, Link, router } from '@inertiajs/vue3';
+import { Head, Link } from '@inertiajs/vue3';
 import { useForm } from '@inertiajs/vue3';
-import { index, create, store } from '@/routes/forms';
 import { ArrowLeft, Plus, Trash2, GripVertical } from 'lucide-vue-next';
 import { ref } from 'vue';
+import InputError from '@/components/InputError.vue';
 import { Button } from '@/components/ui/button';
 import {
     Card,
@@ -23,7 +23,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
-import InputError from '@/components/InputError.vue';
+import { index, create, store } from '@/routes/forms';
 
 interface FieldRow {
     id: number;
@@ -35,8 +35,24 @@ interface FieldRow {
     options: string;
 }
 
-const props = defineProps<{
+interface FieldPayload {
+    type: string;
+    name: string;
+    label: string;
+    placeholder: string;
+    is_required: boolean;
+    options: string[];
+    order: number;
+}
+
+interface MemberOption {
+    id: number;
+    name: string;
+}
+
+defineProps<{
     fieldTypes: string[];
+    teamMembers: MemberOption[];
 }>();
 
 const fieldTypeLabels: Record<string, string> = {
@@ -81,6 +97,20 @@ const form = useForm({
     name: '',
     description: '',
     is_active: true,
+    config: {
+        lead_assignment: {
+            mode: 'distribution',
+            owner_id: '' as string | number,
+        },
+    },
+    fields: fields.value.map((f) => ({
+        type: f.type,
+        name: f.name,
+        label: f.label,
+        placeholder: f.placeholder,
+        is_required: f.is_required,
+        options: f.options,
+    })),
 });
 
 function addField() {
@@ -105,29 +135,75 @@ function needsOptions(type: string): boolean {
     return ['select', 'radio', 'checkbox'].includes(type);
 }
 
-function submit() {
-    const formData = {
-        ...form.data(),
-        fields: fields.value.map((f) => ({
-            type: f.type,
-            name: f.name,
-            label: f.label,
-            placeholder: f.placeholder,
-            is_required: f.is_required,
-            options:
-                f.type === 'select' || f.type === 'radio'
-                    ? f.options
-                          .split('\n')
-                          .map((o) => o.trim())
-                          .filter((o) => o)
-                    : [],
-        })),
-    };
+function normalizeOptions(field: FieldRow): string[] {
+    if (!needsOptions(field.type)) {
+        return [];
+    }
 
-    form.post(store.url(), {
-        data: formData,
-        onSuccess: () => form.reset(),
-    });
+    return field.options
+        .split('\n')
+        .map((option) => option.trim())
+        .filter((option) => option !== '');
+}
+
+function buildFieldsPayload(): FieldPayload[] {
+    return fields.value.map((field, order) => ({
+        type: field.type,
+        name: field.name,
+        label: field.label,
+        placeholder: field.placeholder,
+        is_required: field.is_required,
+        options: normalizeOptions(field),
+        order,
+    }));
+}
+
+function resetFields() {
+    nextFieldId = 1;
+    fields.value = [
+        {
+            id: nextFieldId++,
+            type: 'text',
+            name: '',
+            label: '',
+            placeholder: '',
+            is_required: false,
+            options: '',
+        },
+    ];
+}
+
+function normalizeLeadAssignmentConfig(data: {
+    mode: string;
+    owner_id: string | number;
+}): { mode: string; owner_id: number | null } {
+    return {
+        mode: data.mode,
+        owner_id:
+            data.mode === 'fixed' && data.owner_id !== ''
+                ? Number(data.owner_id)
+                : null,
+    };
+}
+
+function submit() {
+    form
+        .transform((data) => ({
+            ...data,
+            config: {
+                lead_assignment: normalizeLeadAssignmentConfig(
+                    data.config.lead_assignment,
+                ),
+            },
+            fields: buildFieldsPayload(),
+        }))
+        .post(store.url(), {
+            preserveScroll: true,
+            onSuccess: () => {
+                form.reset();
+                resetFields();
+            },
+        });
 }
 </script>
 
@@ -181,13 +257,79 @@ function submit() {
                         <InputError :message="form.errors.description" />
                     </div>
 
+                    <div class="space-y-4 rounded-lg border p-4">
+                        <div class="space-y-2">
+                            <Label for="lead_assignment_mode">
+                                Atribuição de lead
+                            </Label>
+                            <Select v-model="form.config.lead_assignment.mode">
+                                <SelectTrigger id="lead_assignment_mode">
+                                    <SelectValue placeholder="Selecione a estratégia" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="distribution">
+                                        Distribuição automática
+                                    </SelectItem>
+                                    <SelectItem value="fixed">
+                                        Responsável fixo
+                                    </SelectItem>
+                                    <SelectItem value="manual">
+                                        Manual
+                                    </SelectItem>
+                                </SelectContent>
+                            </Select>
+                            <p class="text-xs text-muted-foreground">
+                                A distribuição automática usa os distribuidores
+                                do time. O responsável fixo transfere o lead
+                                para um membro específico.
+                            </p>
+                        </div>
+
+                        <div
+                            v-if="form.config.lead_assignment.mode === 'fixed'"
+                            class="space-y-2"
+                        >
+                            <Label for="lead_assignment_owner">
+                                Responsável padrão
+                            </Label>
+                            <Select
+                                v-model="form.config.lead_assignment.owner_id"
+                            >
+                                <SelectTrigger id="lead_assignment_owner">
+                                    <SelectValue
+                                        placeholder="Selecione um responsável"
+                                    />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem :value="null">
+                                        Sem responsável
+                                    </SelectItem>
+                                    <SelectItem
+                                        v-for="member in teamMembers"
+                                        :key="member.id"
+                                        :value="member.id"
+                                    >
+                                        {{ member.name }}
+                                    </SelectItem>
+                                </SelectContent>
+                            </Select>
+                            <InputError
+                                :message="
+                                    form.errors[
+                                        'config.lead_assignment.owner_id'
+                                    ]
+                                "
+                            />
+                        </div>
+                    </div>
+
                     <div class="flex items-center gap-3 space-y-0">
                         <Checkbox
                             id="is_active"
                             v-model="form.is_active"
                             :checked="form.is_active"
                         />
-                        <Label for="is_active" class="!mt-0"
+                        <Label for="is_active" class="mt-0!"
                             >Formulário ativo</Label
                         >
                     </div>
@@ -309,7 +451,7 @@ function submit() {
                                         />
                                         <Label
                                             :for="`field-required-${field.id}`"
-                                            class="!mt-0"
+                                            class="mt-0!"
                                             >Campo obrigatório</Label
                                         >
                                     </div>

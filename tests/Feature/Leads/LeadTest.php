@@ -3,6 +3,8 @@
 declare(strict_types=1);
 
 use App\Domains\Shared\Context\TenantContext;
+use App\Domains\Leads\Models\LeadAssignmentHistory;
+use App\Enums\TeamRole;
 use App\Models\Lead;
 use App\Models\Unit;
 use App\Models\User;
@@ -148,6 +150,43 @@ test('authenticated user can delete a lead', function () {
     $this->assertSoftDeleted($lead);
 });
 
+test('lead owner transfers are tracked in assignment history', function () {
+    $owner = User::factory()->create();
+    $team = $owner->currentTeam;
+    $assignee = User::factory()->create();
+
+    $team->members()->attach($assignee, ['role' => TeamRole::Member->value]);
+
+    TenantContext::setTeamId($team->id);
+    $owner->assignRole('admin');
+
+    TenantContext::setIgnoreTenancy(true);
+    $unit = Unit::factory()->create(['team_id' => $team->id]);
+    $lead = Lead::create([
+        'team_id' => $team->id,
+        'unit_id' => $unit->id,
+        'owner_id' => $owner->id,
+        'name' => 'Transfer Lead',
+        'email' => 'transfer@example.com',
+        'status' => 'new',
+        'source' => 'website',
+    ]);
+    TenantContext::setIgnoreTenancy(false);
+
+    $response = $this
+        ->actingAs($owner)
+        ->put(route('leads.update', $lead), [
+            'name' => 'Transfer Lead',
+            'owner_id' => $assignee->id,
+        ]);
+
+    $response->assertRedirect();
+
+    expect($lead->fresh()->owner_id)->toBe($assignee->id);
+    expect(LeadAssignmentHistory::query()->count())->toBe(2);
+    expect(LeadAssignmentHistory::query()->latest('id')->first()?->source)->toBe('manual');
+});
+
 test('leads index is scoped to current team', function () {
     $user1 = User::factory()->create();
     $team1 = $user1->currentTeam;
@@ -175,4 +214,47 @@ test('leads index is scoped to current team', function () {
 
     $response->assertOk();
     $response->assertDontSee('Team 1 Lead');
+});
+
+test('users with view-own only see their own leads on the index', function () {
+    $owner = User::factory()->create();
+    $team = $owner->currentTeam;
+
+    $vendor = User::factory()->create();
+    $team->members()->attach($vendor, ['role' => TeamRole::Member->value]);
+    $vendor->switchTeam($team);
+
+    TenantContext::setTeamId($team->id);
+    $vendor->assignRole('vendedor');
+
+    TenantContext::setIgnoreTenancy(true);
+    $unit = Unit::factory()->create(['team_id' => $team->id]);
+    Lead::create([
+        'team_id' => $team->id,
+        'unit_id' => $unit->id,
+        'owner_id' => $vendor->id,
+        'name' => 'Own Lead',
+        'email' => 'own@example.com',
+        'status' => 'new',
+        'source' => 'website',
+    ]);
+
+    Lead::create([
+        'team_id' => $team->id,
+        'unit_id' => $unit->id,
+        'owner_id' => $owner->id,
+        'name' => 'Other Lead',
+        'email' => 'other@example.com',
+        'status' => 'new',
+        'source' => 'website',
+    ]);
+    TenantContext::setIgnoreTenancy(false);
+
+    $response = $this
+        ->actingAs($vendor)
+        ->get(route('leads.index'));
+
+    $response->assertOk();
+    $response->assertSee('Own Lead');
+    $response->assertDontSee('Other Lead');
 });

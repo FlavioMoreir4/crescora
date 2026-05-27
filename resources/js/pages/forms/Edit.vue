@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { Head, Link, router } from '@inertiajs/vue3';
+import { Head, Link } from '@inertiajs/vue3';
 import { useForm } from '@inertiajs/vue3';
-import { index, show, edit, update } from '@/routes/forms';
 import { ArrowLeft, Plus, Trash2, GripVertical } from 'lucide-vue-next';
-import { ref, computed } from 'vue';
+import { ref } from 'vue';
+import InputError from '@/components/InputError.vue';
 import { Button } from '@/components/ui/button';
 import {
     Card,
@@ -23,7 +23,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
-import InputError from '@/components/InputError.vue';
+import { index, show, update } from '@/routes/forms';
 
 interface FormField {
     id: number;
@@ -42,7 +42,18 @@ interface Form {
     slug: string;
     description: string | null;
     is_active: boolean;
+    config: {
+        lead_assignment?: {
+            mode?: string;
+            owner_id?: number | null;
+        };
+    } | null;
     fields: FormField[];
+}
+
+interface MemberOption {
+    id: number;
+    name: string;
 }
 
 interface FieldRow {
@@ -56,9 +67,21 @@ interface FieldRow {
     options: string;
 }
 
+interface FieldPayload {
+    id?: number;
+    type: string;
+    name: string;
+    label: string;
+    placeholder: string;
+    is_required: boolean;
+    options: string[];
+    order: number;
+}
+
 const props = defineProps<{
     form: Form;
     fieldTypes: string[];
+    teamMembers: MemberOption[];
 }>();
 
 const fieldTypeLabels: Record<string, string> = {
@@ -118,10 +141,17 @@ if (fields.value.length === 0) {
     ];
 }
 
-const form = useForm({
+const editForm = useForm({
     name: props.form.name,
     description: props.form.description || '',
     is_active: props.form.is_active,
+    config: {
+        lead_assignment: {
+            mode: props.form.config?.lead_assignment?.mode || 'distribution',
+            owner_id:
+                props.form.config?.lead_assignment?.owner_id ?? ('' as string | number),
+        },
+    },
 });
 
 function addField() {
@@ -146,29 +176,58 @@ function needsOptions(type: string): boolean {
     return ['select', 'radio', 'checkbox'].includes(type);
 }
 
-function submit() {
-    const formData = {
-        ...form.data(),
-        fields: fields.value.map((f) => ({
-            id: f.id,
-            type: f.type,
-            name: f.name,
-            label: f.label,
-            placeholder: f.placeholder,
-            is_required: f.is_required,
-            options:
-                f.type === 'select' || f.type === 'radio'
-                    ? f.options
-                          .split('\n')
-                          .map((o) => o.trim())
-                          .filter((o) => o)
-                    : [],
-        })),
-    };
+function normalizeOptions(field: FieldRow): string[] {
+    if (!needsOptions(field.type)) {
+        return [];
+    }
 
-    form.put(update.url(props.form.slug), {
-        data: formData,
-    });
+    return field.options
+        .split('\n')
+        .map((option) => option.trim())
+        .filter((option) => option !== '');
+}
+
+function buildFieldsPayload(): FieldPayload[] {
+    return fields.value.map((field, order) => ({
+        id: field.id,
+        type: field.type,
+        name: field.name,
+        label: field.label,
+        placeholder: field.placeholder,
+        is_required: field.is_required,
+        options: normalizeOptions(field),
+        order,
+    }));
+}
+
+function normalizeLeadAssignmentConfig(data: {
+    mode: string;
+    owner_id: string | number;
+}): { mode: string; owner_id: number | null } {
+    return {
+        mode: data.mode,
+        owner_id:
+            data.mode === 'fixed' && data.owner_id !== ''
+                ? Number(data.owner_id)
+                : null,
+    };
+}
+
+function submit() {
+    editForm
+        .transform((data) => ({
+            ...data,
+            config: {
+                lead_assignment: normalizeLeadAssignmentConfig(
+                    data.config.lead_assignment,
+                ),
+            },
+            fields: buildFieldsPayload(),
+        }))
+        .put(update.url(props.form.slug), {
+            preserveScroll: true,
+            onSuccess: () => editForm.defaults(),
+        });
 }
 </script>
 
@@ -205,28 +264,96 @@ function submit() {
                         <Label for="name">Nome *</Label>
                         <Input
                             id="name"
-                            v-model="form.name"
+                            v-model="editForm.name"
                             placeholder="Nome do formulário"
                         />
-                        <InputError :message="form.errors.name" />
+                        <InputError :message="editForm.errors.name" />
                     </div>
 
                     <div class="space-y-2">
                         <Label for="description">Descrição</Label>
                         <textarea
                             id="description"
-                            v-model="form.description"
+                            v-model="editForm.description"
                             class="flex min-h-[80px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
                             placeholder="Descrição opcional do formulário..."
                         />
-                        <InputError :message="form.errors.description" />
+                        <InputError :message="editForm.errors.description" />
+                    </div>
+
+                    <div class="space-y-4 rounded-lg border p-4">
+                        <div class="space-y-2">
+                            <Label for="lead_assignment_mode">
+                                Atribuição de lead
+                            </Label>
+                            <Select
+                                v-model="editForm.config.lead_assignment.mode"
+                            >
+                                <SelectTrigger id="lead_assignment_mode">
+                                    <SelectValue placeholder="Selecione a estratégia" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="distribution">
+                                        Distribuição automática
+                                    </SelectItem>
+                                    <SelectItem value="fixed">
+                                        Responsável fixo
+                                    </SelectItem>
+                                    <SelectItem value="manual">
+                                        Manual
+                                    </SelectItem>
+                                </SelectContent>
+                            </Select>
+                            <p class="text-xs text-muted-foreground">
+                                A distribuição automática usa os distribuidores
+                                do time. O responsável fixo transfere o lead
+                                para um membro específico.
+                            </p>
+                        </div>
+
+                        <div
+                            v-if="editForm.config.lead_assignment.mode === 'fixed'"
+                            class="space-y-2"
+                        >
+                            <Label for="lead_assignment_owner">
+                                Responsável padrão
+                            </Label>
+                            <Select
+                                v-model="editForm.config.lead_assignment.owner_id"
+                            >
+                                <SelectTrigger id="lead_assignment_owner">
+                                    <SelectValue
+                                        placeholder="Selecione um responsável"
+                                    />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem :value="null">
+                                        Sem responsável
+                                    </SelectItem>
+                                    <SelectItem
+                                        v-for="member in teamMembers"
+                                        :key="member.id"
+                                        :value="member.id"
+                                    >
+                                        {{ member.name }}
+                                    </SelectItem>
+                                </SelectContent>
+                            </Select>
+                            <InputError
+                                :message="
+                                    editForm.errors[
+                                        'config.lead_assignment.owner_id'
+                                    ]
+                                "
+                            />
+                        </div>
                     </div>
 
                     <div class="flex items-center gap-3 space-y-0">
                         <Checkbox
                             id="is_active"
-                            v-model="form.is_active"
-                            :checked="form.is_active"
+                            v-model="editForm.is_active"
+                            :checked="editForm.is_active"
                         />
                         <Label for="is_active" class="!mt-0"
                             >Formulário ativo</Label
@@ -378,9 +505,9 @@ function submit() {
                             >Cancelar</Button
                         >
                     </Link>
-                    <Button type="submit" :disabled="form.processing">
+                    <Button type="submit" :disabled="editForm.processing">
                         {{
-                            form.processing
+                            editForm.processing
                                 ? 'Salvando...'
                                 : 'Salvar Alterações'
                         }}

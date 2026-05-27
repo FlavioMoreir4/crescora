@@ -24,9 +24,10 @@ final class SubscriptionController
 
     public function index(): Response
     {
-        \Gate::authorize('billing-manage');
+        \Gate::authorize('viewAny', Subscription::class);
 
         $team = request()->user()->currentTeam;
+        abort_unless($team !== null, 404);
         $subscription = $team->subscription;
 
         $plans = Plan::query()->where('is_active', true)->get();
@@ -39,7 +40,7 @@ final class SubscriptionController
 
     public function store(Request $request): RedirectResponse
     {
-        \Gate::authorize('billing-manage');
+        \Gate::authorize('create', Subscription::class);
 
         $validated = $request->validate([
             'plan_id' => ['required', 'exists:plans,id'],
@@ -49,6 +50,7 @@ final class SubscriptionController
 
         $plan = Plan::findOrFail($validated['plan_id']);
         $team = $request->user()->currentTeam;
+        abort_unless($team !== null, 404);
 
         if ($team->subscription?->isActive()) {
             throw ValidationException::withMessages([
@@ -79,11 +81,12 @@ final class SubscriptionController
 
     public function cancel(): RedirectResponse
     {
-        \Gate::authorize('billing-manage');
-
-        $subscription = request()->user()->currentTeam->subscription;
+        $team = request()->user()->currentTeam;
+        abort_unless($team !== null, 404);
+        $subscription = $team->subscription;
 
         abort_unless($subscription !== null, 404);
+        \Gate::authorize('update', $subscription);
 
         $this->gateway->cancelSubscription($subscription);
 
@@ -92,11 +95,12 @@ final class SubscriptionController
 
     public function pixPayment(): JsonResponse
     {
-        \Gate::authorize('billing-manage');
-
-        $subscription = request()->user()->currentTeam->subscription;
+        $team = request()->user()->currentTeam;
+        abort_unless($team !== null, 404);
+        $subscription = $team->subscription;
 
         abort_unless($subscription !== null, 404);
+        \Gate::authorize('update', $subscription);
 
         $pix = $this->gateway->generatePixPayment($subscription);
 

@@ -7,13 +7,16 @@ namespace App\Domains\Distribution\Services;
 use App\Domains\Distribution\Contracts\DistributionStrategy;
 use App\Domains\Distribution\Strategies\RoundRobinStrategy;
 use App\Domains\Leads\Models\Lead;
+use App\Domains\Leads\Services\LeadOwnershipService;
 
 final class DistributionService
 {
     private DistributionStrategy $strategy;
 
-    public function __construct(?DistributionStrategy $strategy = null)
-    {
+    public function __construct(
+        private readonly LeadOwnershipService $ownership,
+        ?DistributionStrategy $strategy = null,
+    ) {
         $this->strategy = $strategy ?? new RoundRobinStrategy;
     }
 
@@ -26,7 +29,14 @@ final class DistributionService
         $owner = $this->strategy->assign($lead);
 
         if ($owner !== null) {
-            $lead->updateQuietly(['owner_id' => $owner->id]);
+            $this->ownership->assign(
+                $lead,
+                $owner,
+                null,
+                'distribution',
+                null,
+                false,
+            );
         }
     }
 }

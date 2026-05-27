@@ -7,7 +7,13 @@ namespace App\Domains\Units\Models;
 use App\Domains\Leads\Models\Lead;
 use App\Domains\Shared\Models\BaseModel;
 use App\Domains\Shared\Models\Concerns\BelongsToTeam;
+use App\Domains\Shared\Context\TenantContext;
+use App\Domains\Teams\Models\TeamResourceAccess;
+use App\Enums\TeamResourceAccessLevel;
+use App\Enums\TeamResourceType;
 use App\Models\Team;
+use App\Models\User;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -65,6 +71,36 @@ class Unit extends BaseModel
     public function leads(): HasMany
     {
         return $this->hasMany(Lead::class, 'unit_id');
+    }
+
+    public static function resourceType(): TeamResourceType
+    {
+        return TeamResourceType::Unit;
+    }
+
+    /**
+     * @return Builder<static>
+     */
+    public function scopeVisibleTo(Builder $query, ?User $user = null): Builder
+    {
+        $user ??= auth()->user();
+        $team = TenantContext::currentTeam();
+
+        if ($user === null || $team === null) {
+            return $query->whereRaw('1 = 0');
+        }
+
+        if ($user->isSystemAdmin() || $user->ownsTeam($team) || $user->hasRole('admin')) {
+            return $query;
+        }
+
+        $ids = $user->accessibleResourceIds(self::resourceType(), TeamResourceAccessLevel::View, $team->id);
+
+        if ($ids === []) {
+            return $query->whereRaw('1 = 0');
+        }
+
+        return $query->whereIn($this->qualifyColumn('id'), $ids);
     }
 
     public function getRouteKeyName(): string

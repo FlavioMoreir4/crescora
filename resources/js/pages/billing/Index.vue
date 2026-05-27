@@ -6,6 +6,7 @@ import {
     cancel as cancelRoute,
 } from '@/routes/billing';
 import { ref } from 'vue';
+import ConfirmActionDialog from '@/components/ConfirmActionDialog.vue';
 import { CreditCard, Check, X, Loader2, ArrowRight } from 'lucide-vue-next';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -55,6 +56,7 @@ defineOptions({
 const isYearly = ref(false);
 const subscribing = ref(false);
 const canceling = ref(false);
+const cancelDialogOpen = ref(false);
 
 const statusColors: Record<string, string> = {
     active: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300',
@@ -99,7 +101,6 @@ function subscribe(planId: number) {
 }
 
 function cancel() {
-    if (!confirm('Tem certeza que deseja cancelar sua assinatura?')) return;
     canceling.value = true;
     router.post(
         cancelRoute.url(),
@@ -110,6 +111,14 @@ function cancel() {
             },
         },
     );
+}
+
+function openCancelDialog(): void {
+    cancelDialogOpen.value = true;
+}
+
+function confirmCancel(): void {
+    cancel();
 }
 
 function formatPrice(price: number): string {
@@ -187,7 +196,7 @@ function formatPrice(price: number): string {
                     <Button
                         variant="destructive"
                         :disabled="canceling"
-                        @click="cancel"
+                        @click="openCancelDialog"
                     >
                         <Loader2
                             v-if="canceling"
@@ -198,6 +207,14 @@ function formatPrice(price: number): string {
                     </Button>
                 </CardFooter>
             </Card>
+
+            <ConfirmActionDialog
+                v-model:open="cancelDialogOpen"
+                title="Cancelar assinatura?"
+                description="Você perderá o acesso ao plano atual ao final do período vigente."
+                confirm-label="Cancelar assinatura"
+                @confirm="confirmCancel"
+            />
         </template>
 
         <template v-else>

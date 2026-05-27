@@ -6,17 +6,7 @@ import type { ColumnDef } from '@tanstack/vue-table';
 import { Plus, Pencil, Trash2 } from 'lucide-vue-next';
 import { Button } from '@/components/ui/button';
 import DataTable from '@/components/DataTable.vue';
-import {
-    AlertDialog,
-    AlertDialogAction,
-    AlertDialogCancel,
-    AlertDialogContent,
-    AlertDialogDescription,
-    AlertDialogFooter,
-    AlertDialogHeader,
-    AlertDialogTitle,
-    AlertDialogTrigger,
-} from '@/components/ui/alert-dialog';
+import ConfirmActionDialog from '@/components/ConfirmActionDialog.vue';
 
 interface Unit {
     id: number;
@@ -53,7 +43,6 @@ defineOptions({
 });
 
 const alertDialogOpen = ref(false);
-const alertDialogMessage = ref('');
 const unitToDelete = ref<Unit | null>(null);
 
 const columns: ColumnDef<Unit>[] = [
@@ -93,7 +82,6 @@ function handleDelete(unit: Unit) {
     unitToDelete.value = unit;
 
     alertDialogOpen.value = true;
-    alertDialogMessage.value = `Excluir unidade "${unit.name}"?`;
 }
 
 function handleConfirmDelete() {
@@ -125,26 +113,17 @@ function handleConfirmDelete() {
             </Link>
         </div>
 
-        <AlertDialog :open="alertDialogOpen">
-            <AlertDialogContent>
-                <AlertDialogHeader>
-                    <AlertDialogTitle>{{
-                        alertDialogMessage
-                    }}</AlertDialogTitle>
-                    <AlertDialogDescription>
-                        Essa ação não pode ser desfeita.
-                    </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                    <AlertDialogCancel @click="alertDialogOpen = false"
-                        >Cancel</AlertDialogCancel
-                    >
-                    <AlertDialogAction @click="handleConfirmDelete(unit)"
-                        >Continue</AlertDialogAction
-                    >
-                </AlertDialogFooter>
-            </AlertDialogContent>
-        </AlertDialog>
+        <ConfirmActionDialog
+            v-model:open="alertDialogOpen"
+            :title="
+                unitToDelete
+                    ? `Excluir unidade '${unitToDelete.name}'?`
+                    : 'Excluir unidade?'
+            "
+            description="Essa ação não pode ser desfeita."
+            confirm-label="Excluir"
+            @confirm="handleConfirmDelete"
+        />
 
         <DataTable
             :columns="columns"

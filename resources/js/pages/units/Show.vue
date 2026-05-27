@@ -2,6 +2,8 @@
 import { Head, Link, router } from '@inertiajs/vue3';
 import { index, show, edit, destroy } from '@/routes/units';
 import { ArrowLeft, Pencil, Trash2 } from 'lucide-vue-next';
+import { ref } from 'vue';
+import ConfirmActionDialog from '@/components/ConfirmActionDialog.vue';
 import { Button } from '@/components/ui/button';
 import {
     Card,
@@ -26,7 +28,7 @@ interface Unit {
     created_at: string;
 }
 
-defineProps<{
+const props = defineProps<{
     unit: Unit;
 }>();
 
@@ -39,10 +41,14 @@ defineOptions({
     },
 });
 
-function handleDelete() {
-    if (confirm(`Excluir unidade "${unit.name}"?`)) {
-        router.delete(destroy.url(unit.slug));
-    }
+const deleteDialogOpen = ref(false);
+
+function handleDelete(): void {
+    deleteDialogOpen.value = true;
+}
+
+function confirmDelete(): void {
+    router.delete(destroy.url(props.unit.slug));
 }
 </script>
 
@@ -84,6 +90,14 @@ function handleDelete() {
                 </Button>
             </div>
         </div>
+
+        <ConfirmActionDialog
+            v-model:open="deleteDialogOpen"
+            :title="`Excluir unidade '${unit.name}'?`"
+            description="Essa ação não pode ser desfeita."
+            confirm-label="Excluir"
+            @confirm="confirmDelete"
+        />
 
         <Card>
             <CardHeader>

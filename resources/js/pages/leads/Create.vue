@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { Head, Link, router } from '@inertiajs/vue3';
-import { index, create, store } from '@/routes/leads';
+import { Head, Link } from '@inertiajs/vue3';
 import { useForm } from '@inertiajs/vue3';
 import { ArrowLeft } from 'lucide-vue-next';
+import InputError from '@/components/InputError.vue';
 import { Button } from '@/components/ui/button';
 import {
     Card,
@@ -21,7 +21,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
-import InputError from '@/components/InputError.vue';
+import { index, create, store } from '@/routes/leads';
 
 interface StatusOption {
     value: string;
@@ -33,9 +33,15 @@ interface UnitOption {
     name: string;
 }
 
+interface MemberOption {
+    id: number;
+    name: string;
+}
+
 const props = defineProps<{
     statuses: StatusOption[];
     units: UnitOption[];
+    members: MemberOption[];
 }>();
 
 defineOptions({
@@ -53,6 +59,7 @@ const form = useForm({
     phone: '',
     status: props.statuses[0]?.value || 'new',
     unit_id: '' as string | number,
+    owner_id: '' as string | number,
     notes: '',
 });
 
@@ -166,6 +173,30 @@ function submit() {
                             </Select>
                             <InputError :message="form.errors.unit_id" />
                         </div>
+                    </div>
+
+                    <div class="space-y-2">
+                        <Label for="owner_id">Responsável</Label>
+                        <Select v-model="form.owner_id">
+                            <SelectTrigger id="owner_id">
+                                <SelectValue
+                                    placeholder="Selecione um responsável"
+                                />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem :value="null">
+                                    Sem responsável
+                                </SelectItem>
+                                <SelectItem
+                                    v-for="member in members"
+                                    :key="member.id"
+                                    :value="member.id"
+                                >
+                                    {{ member.name }}
+                                </SelectItem>
+                            </SelectContent>
+                        </Select>
+                        <InputError :message="form.errors.owner_id" />
                     </div>
 
                     <div class="space-y-2">

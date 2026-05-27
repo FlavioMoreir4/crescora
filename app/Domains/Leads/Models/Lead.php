@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Domains\Leads\Models;
 
 use App\Domains\Leads\Enums\LeadStatus;
+use App\Domains\Leads\Models\LeadAssignmentHistory;
 use App\Domains\Shared\Models\BaseModel;
 use App\Domains\Shared\Models\Concerns\BelongsToTeam;
 use App\Domains\Units\Models\Unit;
@@ -60,6 +61,11 @@ class Lead extends BaseModel
     public function statusHistories(): HasMany
     {
         return $this->hasMany(LeadStatusHistory::class)->latest();
+    }
+
+    public function assignmentHistories(): HasMany
+    {
+        return $this->hasMany(LeadAssignmentHistory::class)->latest();
     }
 
     public function scopeByStatus($query, LeadStatus $status)

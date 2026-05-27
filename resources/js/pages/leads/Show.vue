@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { Head, Link, router } from '@inertiajs/vue3';
-import { index, show, edit, destroy } from '@/routes/leads';
 import { ArrowLeft, Pencil, Trash2 } from 'lucide-vue-next';
-import { Button } from '@/components/ui/button';
+import { computed, ref } from 'vue';
+import ConfirmActionDialog from '@/components/ConfirmActionDialog.vue';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import {
     Card,
     CardContent,
@@ -11,6 +12,7 @@ import {
     CardHeader,
     CardTitle,
 } from '@/components/ui/card';
+import { index, edit, destroy } from '@/routes/leads';
 
 interface StatusOption {
     value: string;
@@ -36,20 +38,38 @@ interface StatusHistory {
     created_at: string;
 }
 
+interface AssignmentHistory {
+    id: number;
+    fromOwner: User | null;
+    toOwner: User | null;
+    actor: User | null;
+    source: string;
+    created_at: string;
+}
+
 interface Lead {
     id: number;
     name: string;
     email: string | null;
     phone: string | null;
+    document: string | null;
+    source: string | null;
+    data: Record<string, unknown> | null;
     status: string;
     notes: string | null;
     created_at: string;
+    created_at_formatted?: string | null;
+    updated_at_formatted?: string | null;
+    last_contacted_at?: string | null;
     unit: Unit | null;
     owner: User | null;
-    statusHistories: StatusHistory[];
+    statusHistories?: StatusHistory[];
+    status_histories?: StatusHistory[];
+    assignmentHistories?: AssignmentHistory[];
+    assignment_histories?: AssignmentHistory[];
 }
 
-defineProps<{
+const props = defineProps<{
     lead: Lead;
     statuses: StatusOption[];
 }>();
@@ -62,6 +82,75 @@ defineOptions({
         ],
     },
 });
+
+const deleteDialogOpen = ref(false);
+const leadDataEntries = computed(() =>
+    Object.entries(props.lead.data ?? {}).filter(([, value]) => {
+        return value !== null && value !== undefined && value !== '';
+    }),
+);
+const statusHistoryEntries = computed(
+    () => props.lead.status_histories ?? props.lead.statusHistories ?? [],
+);
+const assignmentHistoryEntries = computed(
+    () => props.lead.assignment_histories ?? props.lead.assignmentHistories ?? [],
+);
+
+function labelFromKey(key: string): string {
+    return key.replaceAll('_', ' ');
+}
+
+function formatValue(value: unknown): string {
+    if (value === null || value === undefined || value === '') {
+        return '—';
+    }
+
+    if (Array.isArray(value)) {
+        return value.map((item) => String(item)).join(', ');
+    }
+
+    if (typeof value === 'object') {
+        return JSON.stringify(value);
+    }
+
+    return String(value);
+}
+
+function sourceLabel(source: string | null): string {
+    if (!source) {
+        return '—';
+    }
+
+    if (source.startsWith('form:')) {
+        return `Formulário: ${source.replace('form:', '')}`;
+    }
+
+    return source;
+}
+
+function assignmentSourceLabel(source: string): string {
+    if (source === 'distribution') {
+        return 'Distribuição automática';
+    }
+
+    if (source === 'form') {
+        return 'Formulário';
+    }
+
+    if (source === 'creation') {
+        return 'Criação';
+    }
+
+    return source;
+}
+
+function formatDate(value: string | null | undefined): string {
+    if (!value) {
+        return '—';
+    }
+
+    return new Date(value).toLocaleString('pt-BR');
+}
 
 const statusLabels: Record<string, string> = {
     new: 'Novo',
@@ -89,10 +178,12 @@ const statusColors: Record<string, string> = {
     archived: 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300',
 };
 
-function handleDelete() {
-    if (confirm(`Excluir lead "${lead.name}"?`)) {
-        router.delete(destroy.url(lead.id));
-    }
+function handleDelete(): void {
+    deleteDialogOpen.value = true;
+}
+
+function confirmDelete(): void {
+    router.delete(destroy.url(props.lead.id));
 }
 </script>
 
@@ -121,11 +212,7 @@ function handleDelete() {
                     </div>
                     <p class="text-sm text-muted-foreground">
                         Lead #{{ lead.id }} • Criado em
-                        {{
-                            new Date(lead.created_at).toLocaleDateString(
-                                'pt-BR',
-                            )
-                        }}
+                        {{ lead.created_at_formatted || formatDate(lead.created_at) }}
                     </p>
                 </div>
             </div>
@@ -142,6 +229,14 @@ function handleDelete() {
                 </Button>
             </div>
         </div>
+
+        <ConfirmActionDialog
+            v-model:open="deleteDialogOpen"
+            :title="`Excluir lead '${lead.name}'?`"
+            description="Essa ação não pode ser desfeita."
+            confirm-label="Excluir"
+            @confirm="confirmDelete"
+        />
 
         <div class="grid gap-6 md:grid-cols-2">
             <Card>
@@ -163,6 +258,12 @@ function handleDelete() {
                         </p>
                     </div>
                     <div>
+                        <span class="text-sm font-medium">Documento</span>
+                        <p class="text-sm text-muted-foreground">
+                            {{ lead.document || '—' }}
+                        </p>
+                    </div>
+                    <div>
                         <span class="text-sm font-medium">Unidade</span>
                         <p class="text-sm text-muted-foreground">
                             {{ lead.unit?.name || '—' }}
@@ -172,6 +273,18 @@ function handleDelete() {
                         <span class="text-sm font-medium">Responsável</span>
                         <p class="text-sm text-muted-foreground">
                             {{ lead.owner?.name || '—' }}
+                        </p>
+                    </div>
+                    <div>
+                        <span class="text-sm font-medium">Origem</span>
+                        <p class="text-sm text-muted-foreground">
+                            {{ sourceLabel(lead.source) }}
+                        </p>
+                    </div>
+                    <div>
+                        <span class="text-sm font-medium">Último contato</span>
+                        <p class="text-sm text-muted-foreground">
+                            {{ formatDate(lead.last_contacted_at) }}
                         </p>
                     </div>
                 </CardContent>
@@ -192,18 +305,83 @@ function handleDelete() {
 
         <Card>
             <CardHeader>
+                <CardTitle>Dados captados</CardTitle>
+                <CardDescription>
+                    Valores recebidos pelo formulário ou preenchidos manualmente.
+                </CardDescription>
+            </CardHeader>
+            <CardContent>
+                <div
+                    v-if="leadDataEntries.length > 0"
+                    class="grid gap-3 md:grid-cols-2"
+                >
+                    <div
+                        v-for="[key, value] in leadDataEntries"
+                        :key="key"
+                        class="rounded-lg border p-4"
+                    >
+                        <p class="text-xs uppercase tracking-[0.2em] text-muted-foreground">
+                            {{ labelFromKey(key) }}
+                        </p>
+                        <p class="mt-2 text-sm">
+                            {{ formatValue(value) }}
+                        </p>
+                    </div>
+                </div>
+                <p v-else class="py-8 text-center text-sm text-muted-foreground">
+                    Nenhum dado adicional foi captado para este lead.
+                </p>
+            </CardContent>
+        </Card>
+
+        <Card>
+            <CardHeader>
+                <CardTitle>Histórico de responsáveis</CardTitle>
+                <CardDescription>
+                    Mudanças de ownership registradas para este lead.
+                </CardDescription>
+            </CardHeader>
+            <CardContent>
+                <div v-if="assignmentHistoryEntries.length > 0" class="space-y-3">
+                    <div
+                        v-for="history in assignmentHistoryEntries"
+                        :key="history.id"
+                        class="flex flex-wrap items-center gap-3 text-sm"
+                    >
+                        <Badge variant="outline">
+                            {{ history.fromOwner?.name || '—' }} →
+                            {{ history.toOwner?.name || 'Sem responsável' }}
+                        </Badge>
+                        <span class="text-muted-foreground">
+                            {{ assignmentSourceLabel(history.source) }}
+                        </span>
+                        <span class="text-muted-foreground">
+                            por {{ history.actor?.name || 'sistema' }}
+                        </span>
+                        <span class="text-muted-foreground">
+                            {{
+                                new Date(history.created_at).toLocaleString(
+                                    'pt-BR',
+                                )
+                            }}
+                        </span>
+                    </div>
+                </div>
+                <p v-else class="text-sm text-muted-foreground">
+                    Nenhuma transferência de responsável registrada.
+                </p>
+            </CardContent>
+        </Card>
+
+        <Card>
+            <CardHeader>
                 <CardTitle>Histórico de Status</CardTitle>
                 <CardDescription>Alterações de status do lead.</CardDescription>
             </CardHeader>
             <CardContent>
-                <div
-                    v-if="
-                        lead.statusHistories && lead.statusHistories.length > 0
-                    "
-                    class="space-y-3"
-                >
+                <div v-if="statusHistoryEntries.length > 0" class="space-y-3">
                     <div
-                        v-for="h in lead.statusHistories"
+                        v-for="h in statusHistoryEntries"
                         :key="h.id"
                         class="flex items-center gap-3 text-sm"
                     >

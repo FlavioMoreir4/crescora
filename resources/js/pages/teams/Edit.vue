@@ -7,6 +7,7 @@ import DeleteTeamModal from '@/components/DeleteTeamModal.vue';
 import Heading from '@/components/Heading.vue';
 import InputError from '@/components/InputError.vue';
 import InviteMemberModal from '@/components/InviteMemberModal.vue';
+import TeamMemberAccessModal from '@/components/TeamMemberAccessModal.vue';
 import RemoveMemberModal from '@/components/RemoveMemberModal.vue';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -30,10 +31,13 @@ import { edit, index, update } from '@/routes/teams';
 import { update as updateMember } from '@/routes/teams/members';
 import type {
     RoleOption,
+    ResourceAccessLevelOption,
     Team,
+    TeamFormOption,
     TeamInvitation,
     TeamMember,
     TeamPermissions,
+    TeamResourceOption,
 } from '@/types';
 
 type Props = {
@@ -42,6 +46,9 @@ type Props = {
     invitations: TeamInvitation[];
     permissions: TeamPermissions;
     availableRoles: RoleOption[];
+    resourceAccessLevels: ResourceAccessLevelOption[];
+    units: TeamResourceOption[];
+    forms: TeamFormOption[];
 };
 
 const props = defineProps<Props>();
@@ -69,6 +76,8 @@ const removeMemberDialogOpen = ref(false);
 const memberToRemove = ref<TeamMember | null>(null);
 const cancelInvitationDialogOpen = ref(false);
 const invitationToCancel = ref<TeamInvitation | null>(null);
+const resourceAccessDialogOpen = ref(false);
+const memberToManageAccess = ref<TeamMember | null>(null);
 
 const pageTitle = computed(() =>
     props.permissions.canUpdateTeam
@@ -91,6 +100,11 @@ const confirmRemoveMember = (member: TeamMember) => {
 const confirmCancelInvitation = (invitation: TeamInvitation) => {
     invitationToCancel.value = invitation;
     cancelInvitationDialogOpen.value = true;
+};
+
+const confirmManageAccess = (member: TeamMember) => {
+    memberToManageAccess.value = member;
+    resourceAccessDialogOpen.value = true;
 };
 </script>
 
@@ -223,6 +237,17 @@ const confirmCancelInvitation = (invitation: TeamInvitation) => {
                                 </DropdownMenuItem>
                             </DropdownMenuContent>
                         </DropdownMenu>
+                        <Button
+                            v-if="
+                                member.role !== 'owner' &&
+                                permissions.canUpdateMember
+                            "
+                            variant="outline"
+                            size="sm"
+                            @click="confirmManageAccess(member)"
+                        >
+                            Acessos
+                        </Button>
                         <Badge v-else variant="secondary">
                             {{ member.role_label }}
                         </Badge>
@@ -350,6 +375,17 @@ const confirmCancelInvitation = (invitation: TeamInvitation) => {
         :member="memberToRemove"
         :open="removeMemberDialogOpen"
         @update:open="removeMemberDialogOpen = $event"
+    />
+
+    <TeamMemberAccessModal
+        v-if="permissions.canUpdateMember"
+        :team="team"
+        :member="memberToManageAccess"
+        :units="units"
+        :forms="forms"
+        :access-levels="resourceAccessLevels"
+        :open="resourceAccessDialogOpen"
+        @update:open="resourceAccessDialogOpen = $event"
     />
 
     <CancelInvitationModal

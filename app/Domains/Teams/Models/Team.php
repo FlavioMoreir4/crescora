@@ -6,6 +6,7 @@ namespace App\Domains\Teams\Models;
 
 use App\Concerns\GeneratesUniqueTeamSlugs;
 use App\Domains\Billing\Models\Subscription;
+use App\Domains\Teams\Models\TeamResourceAccess;
 use App\Domains\Users\Models\User;
 use App\Enums\TeamRole;
 use App\Models\Membership;
@@ -63,6 +64,14 @@ class Team extends Model
     public function memberships(): HasMany
     {
         return $this->hasMany(Membership::class);
+    }
+
+    /**
+     * @return HasMany<TeamResourceAccess, $this>
+     */
+    public function resourceAccesses(): HasMany
+    {
+        return $this->hasMany(TeamResourceAccess::class);
     }
 
     public function invitations(): HasMany

@@ -4,9 +4,13 @@ namespace App\Http\Controllers\Teams;
 
 use App\Actions\Teams\CreateTeam;
 use App\Enums\TeamRole;
+use App\Enums\TeamResourceAccessLevel;
+use App\Enums\TeamResourceType;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Teams\DeleteTeamRequest;
 use App\Http\Requests\Teams\SaveTeamRequest;
+use App\Domains\Forms\Models\Form;
+use App\Domains\Units\Models\Unit;
 use App\Models\Team;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
@@ -52,6 +56,17 @@ class TeamController extends Controller
         Gate::authorize('update', $team);
 
         $user = $request->user();
+        $units = Unit::query()
+            ->where('team_id', $team->id)
+            ->orderBy('name')
+            ->get(['id', 'name', 'slug']);
+        $forms = Form::query()
+            ->where('team_id', $team->id)
+            ->orderBy('name')
+            ->get(['id', 'name', 'slug', 'config']);
+        $resourceAccesses = $team->resourceAccesses()
+            ->get()
+            ->groupBy('user_id');
 
         return Inertia::render('teams/Edit', [
             'team' => [
@@ -67,6 +82,13 @@ class TeamController extends Controller
                 'avatar' => $member->avatar ?? null,
                 'role' => $member->pivot->role->value,
                 'role_label' => $member->pivot->role->label(),
+                'resource_accesses' => $resourceAccesses->get($member->id, collect())
+                    ->map(fn ($access) => [
+                        'resource_type' => $access->resource_type->value,
+                        'resource_id' => $access->resource_id,
+                        'access_level' => $access->access_level->value,
+                    ])
+                    ->values(),
             ]),
             'invitations' => $team->invitations()
                 ->whereNull('accepted_at')
@@ -75,11 +97,26 @@ class TeamController extends Controller
                     'code' => $invitation->code,
                     'email' => $invitation->email,
                     'role' => $invitation->role->value,
-                    'role_label' => $invitation->role->label(),
-                    'created_at' => $invitation->created_at->toISOString(),
-                ]),
+                'role_label' => $invitation->role->label(),
+                'created_at' => $invitation->created_at->toISOString(),
+            ]),
             'permissions' => $user->toTeamPermissions($team),
             'availableRoles' => TeamRole::assignable(),
+            'resourceAccessLevels' => TeamResourceAccessLevel::options(),
+            'units' => $units->map(fn ($unit) => [
+                'id' => $unit->id,
+                'name' => $unit->name,
+                'slug' => $unit->slug,
+            ]),
+            'forms' => $forms->map(fn ($form) => [
+                'id' => $form->id,
+                'name' => $form->name,
+                'slug' => $form->slug,
+                'leadAssignment' => [
+                    'mode' => data_get($form->config, 'lead_assignment.mode', 'distribution'),
+                    'owner_id' => data_get($form->config, 'lead_assignment.owner_id'),
+                ],
+            ]),
         ]);
     }
 

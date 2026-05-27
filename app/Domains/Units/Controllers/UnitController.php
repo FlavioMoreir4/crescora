@@ -18,8 +18,11 @@ final class UnitController
     {
         \Gate::authorize('viewAny', Unit::class);
 
+        $user = request()->user();
+
         $units = Unit::query()
             ->forCurrentTeam()
+            ->visibleTo($user)
             ->when(request('search'), function ($query, $search) {
                 $query->where('name', 'like', "%{$search}%");
             })

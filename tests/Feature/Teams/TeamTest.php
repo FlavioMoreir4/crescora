@@ -1,7 +1,13 @@
 <?php
 
+use App\Domains\Forms\Models\Form;
+use App\Domains\Shared\Context\TenantContext;
+use App\Domains\Teams\Models\TeamResourceAccess;
+use App\Enums\TeamResourceAccessLevel;
+use App\Enums\TeamResourceType;
 use App\Enums\TeamRole;
 use App\Models\Team;
+use App\Models\Unit;
 use App\Models\User;
 
 test('the teams index page can be rendered', function () {
@@ -61,6 +67,63 @@ test('the team edit page can be rendered', function () {
         ->get(route('teams.edit', $team));
 
     $response->assertOk();
+});
+
+test('team owners can manage member resource access allowlists', function () {
+    $user = User::factory()->create();
+    $team = Team::factory()->create(['name' => 'Access Team']);
+    $team->members()->attach($user, ['role' => TeamRole::Owner->value]);
+    $team->update(['slug' => 'access-team']);
+    $user->update(['current_team_id' => $team->id]);
+
+    $member = User::factory()->create();
+    $team->members()->attach($member, ['role' => TeamRole::Member->value]);
+
+    TenantContext::setIgnoreTenancy(true);
+    $unit = Unit::factory()->create(['team_id' => $team->id, 'name' => 'Unit A']);
+    $form = Form::query()->create([
+        'team_id' => $team->id,
+        'name' => 'Form A',
+        'is_active' => true,
+    ]);
+    TenantContext::setIgnoreTenancy(false);
+
+    $response = $this
+        ->actingAs($user)
+        ->patch(route('teams.members.resources.update', [$team, $member]), [
+            'resources' => [
+                'units' => [
+                    [
+                        'resource_id' => $unit->id,
+                        'access_level' => TeamResourceAccessLevel::View->value,
+                    ],
+                ],
+                'forms' => [
+                    [
+                        'resource_id' => $form->id,
+                        'access_level' => TeamResourceAccessLevel::Manage->value,
+                    ],
+                ],
+            ],
+        ]);
+
+    $response->assertRedirect(route('teams.edit', $team));
+
+    $this->assertDatabaseHas('team_resource_accesses', [
+        'team_id' => $team->id,
+        'user_id' => $member->id,
+        'resource_type' => TeamResourceType::Unit->value,
+        'resource_id' => $unit->id,
+        'access_level' => TeamResourceAccessLevel::View->value,
+    ]);
+
+    $this->assertDatabaseHas('team_resource_accesses', [
+        'team_id' => $team->id,
+        'user_id' => $member->id,
+        'resource_type' => TeamResourceType::Form->value,
+        'resource_id' => $form->id,
+        'access_level' => TeamResourceAccessLevel::Manage->value,
+    ]);
 });
 
 test('teams can be updated by owners', function () {

@@ -9,6 +9,7 @@ use App\Domains\Forms\Models\FormField;
 use App\Domains\Forms\Requests\StoreFormRequest;
 use App\Domains\Forms\Requests\UpdateFormRequest;
 use App\Domains\Shared\Context\TenantContext;
+use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -19,8 +20,11 @@ final class FormController
     {
         \Gate::authorize('viewAny', Form::class);
 
+        $user = request()->user();
+
         $forms = Form::query()
             ->forCurrentTeam()
+            ->visibleTo($user)
             ->withCount('fields', 'submissions')
             ->when(request('search'), function ($query, $search) {
                 $query->where('name', 'like', "%{$search}%");
@@ -41,6 +45,7 @@ final class FormController
 
         return Inertia::render('forms/Create', [
             'fieldTypes' => FormField::allowedTypes(),
+            'teamMembers' => $this->teamMembers(),
         ]);
     }
 
@@ -71,6 +76,8 @@ final class FormController
 
         return Inertia::render('forms/Show', [
             'form' => $form,
+            'units' => $this->visibleUnits(),
+            'teamMembers' => $this->teamMembers(),
         ]);
     }
 
@@ -83,6 +90,7 @@ final class FormController
         return Inertia::render('forms/Edit', [
             'form' => $form,
             'fieldTypes' => FormField::allowedTypes(),
+            'teamMembers' => $this->teamMembers(),
         ]);
     }
 
@@ -107,5 +115,44 @@ final class FormController
         $form->delete();
 
         return to_route('forms.index');
+    }
+
+    /**
+     * @return array<int, array{id: int, name: string}>
+     */
+    private function teamMembers(): array
+    {
+        $team = TenantContext::currentTeam();
+
+        if ($team === null) {
+            return [];
+        }
+
+        return $team->members()
+            ->orderBy('name')
+            ->get(['users.id', 'users.name'])
+            ->map(fn ($member) => [
+                'id' => $member->id,
+                'name' => $member->name,
+            ])
+            ->all();
+    }
+
+    /**
+     * @return array<int, array{id: int, name: string, slug: string}>
+     */
+    private function visibleUnits(): array
+    {
+        return \App\Domains\Units\Models\Unit::query()
+            ->forCurrentTeam()
+            ->visibleTo(request()->user())
+            ->orderBy('name')
+            ->get(['id', 'name', 'slug'])
+            ->map(fn ($unit) => [
+                'id' => $unit->id,
+                'name' => $unit->name,
+                'slug' => $unit->slug,
+            ])
+            ->all();
     }
 }

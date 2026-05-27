@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { Head, Link, router } from '@inertiajs/vue3';
-import { index, show, edit, destroy } from '@/routes/forms';
+import { Head, Link, router, usePage } from '@inertiajs/vue3';
 import { ArrowLeft, Pencil, Trash2, Eye } from 'lucide-vue-next';
-import { Button } from '@/components/ui/button';
+import { computed, ref } from 'vue';
+import ConfirmActionDialog from '@/components/ConfirmActionDialog.vue';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import {
     Card,
     CardContent,
@@ -11,6 +12,8 @@ import {
     CardHeader,
     CardTitle,
 } from '@/components/ui/card';
+import { index, edit, destroy } from '@/routes/forms';
+import { show as publicFormShow } from '@/routes/public/forms';
 
 interface FormField {
     id: number;
@@ -26,6 +29,7 @@ interface FormField {
 interface FormSubmission {
     id: number;
     data: Record<string, any>;
+    metadata: Record<string, any> | null;
     created_at: string;
 }
 
@@ -35,6 +39,12 @@ interface Form {
     slug: string;
     description: string | null;
     is_active: boolean;
+    config: {
+        lead_assignment?: {
+            mode?: string;
+            owner_id?: number | null;
+        };
+    } | null;
     created_at: string;
     fields: FormField[];
     submissions: FormSubmission[];
@@ -42,9 +52,21 @@ interface Form {
     submissions_count: number;
 }
 
+interface UnitLink {
+    id: number;
+    name: string;
+    slug: string;
+}
+
 const props = defineProps<{
     form: Form;
+    units: UnitLink[];
+    teamMembers: { id: number; name: string }[];
 }>();
+
+const page = usePage();
+const currentTeamSlug = computed(() => page.props.currentTeam?.slug ?? '');
+const deleteDialogOpen = ref(false);
 
 defineOptions({
     layout: (pageProps: { form?: { name: string } }) => ({
@@ -70,10 +92,55 @@ const fieldTypeLabels: Record<string, string> = {
     date: 'Data',
 };
 
-function handleDelete() {
-    if (confirm(`Excluir formulário "${form.name}"?`)) {
-        router.delete(destroy.url(form.slug));
+const fieldLabels = computed<Record<string, string>>(() =>
+    Object.fromEntries(
+        props.form.fields.map((field) => [field.name, field.label || field.name]),
+    ),
+);
+
+const leadAssignmentModeLabel: Record<string, string> = {
+    distribution: 'Distribuição automática',
+    fixed: 'Responsável fixo',
+    manual: 'Manual',
+};
+
+const leadAssignmentOwner = computed(() =>
+    props.teamMembers.find(
+        (member) =>
+            member.id === props.form.config?.lead_assignment?.owner_id,
+    ) ?? null,
+);
+
+function submissionLabel(key: string): string {
+    return fieldLabels.value[key] ?? key.replaceAll('_', ' ');
+}
+
+function submissionValue(value: unknown): string {
+    if (value === null || value === undefined || value === '') {
+        return '—';
     }
+
+    if (Array.isArray(value)) {
+        return value.map((item) => String(item)).join(', ');
+    }
+
+    if (typeof value === 'object') {
+        return JSON.stringify(value);
+    }
+
+    return String(value);
+}
+
+function metadataEntries(metadata: Record<string, any> | null): Array<[string, any]> {
+    return Object.entries(metadata ?? {});
+}
+
+function handleDelete(): void {
+    deleteDialogOpen.value = true;
+}
+
+function confirmDelete(): void {
+    router.delete(destroy.url(props.form.slug));
 }
 </script>
 
@@ -116,12 +183,6 @@ function handleDelete() {
                 </div>
             </div>
             <div class="flex items-center gap-2">
-                <Link :href="show.url(form.slug) + '/preview'">
-                    <Button variant="outline">
-                        <Eye class="mr-2 h-4 w-4" />
-                        Visualizar
-                    </Button>
-                </Link>
                 <Link :href="edit.url(form.slug)">
                     <Button variant="outline">
                         <Pencil class="mr-2 h-4 w-4" />
@@ -134,6 +195,14 @@ function handleDelete() {
                 </Button>
             </div>
         </div>
+
+        <ConfirmActionDialog
+            v-model:open="deleteDialogOpen"
+            :title="`Excluir formulário '${form.name}'?`"
+            description="Essa ação não pode ser desfeita."
+            confirm-label="Excluir"
+            @confirm="confirmDelete"
+        />
 
         <div class="grid gap-6 lg:grid-cols-3">
             <Card class="lg:col-span-2">
@@ -180,6 +249,85 @@ function handleDelete() {
                 </CardContent>
             </Card>
         </div>
+
+        <Card>
+            <CardHeader>
+                <CardTitle>Atribuição de lead</CardTitle>
+                <CardDescription>
+                    Como os leads captados por este formulário são
+                    encaminhados.
+                </CardDescription>
+            </CardHeader>
+            <CardContent class="grid gap-4 md:grid-cols-2">
+                <div>
+                    <span class="text-sm font-medium">Estratégia</span>
+                    <p class="text-sm text-muted-foreground">
+                        {{
+                            leadAssignmentModeLabel[
+                                form.config?.lead_assignment?.mode || 'distribution'
+                            ] || 'Distribuição automática'
+                        }}
+                    </p>
+                </div>
+                <div>
+                    <span class="text-sm font-medium">Responsável padrão</span>
+                    <p class="text-sm text-muted-foreground">
+                        {{ leadAssignmentOwner?.name || '—' }}
+                    </p>
+                </div>
+            </CardContent>
+        </Card>
+
+        <Card>
+            <CardHeader>
+                <CardTitle>Links Públicos</CardTitle>
+                <CardDescription>
+                    Compartilhe o formulário com a URL da unidade.
+                </CardDescription>
+            </CardHeader>
+            <CardContent>
+                <div v-if="units.length > 0" class="grid gap-3 md:grid-cols-2">
+                    <div
+                        v-for="unit in units"
+                        :key="unit.id"
+                        class="rounded-lg border p-4"
+                    >
+                        <div class="flex items-start justify-between gap-4">
+                            <div class="min-w-0">
+                                <p class="font-medium">{{ unit.name }}</p>
+                                <p class="truncate text-xs text-muted-foreground">
+                                    {{
+                                    publicFormShow.url({
+                                            teamSlug: currentTeamSlug,
+                                            unitSlug: unit.slug,
+                                            formSlug: form.slug,
+                                        })
+                                    }}
+                                </p>
+                            </div>
+                            <Link
+                                :href="
+                                    publicFormShow.url({
+                                        teamSlug: currentTeamSlug,
+                                        unitSlug: unit.slug,
+                                        formSlug: form.slug,
+                                    })
+                                "
+                                target="_blank"
+                            >
+                                <Button variant="outline" size="sm">
+                                    <Eye class="mr-2 h-4 w-4" />
+                                    Abrir
+                                </Button>
+                            </Link>
+                        </div>
+                    </div>
+                </div>
+                <p v-else class="py-6 text-sm text-muted-foreground">
+                    Nenhuma unidade cadastrada para gerar um link público.
+                </p>
+            </CardContent>
+        </Card>
 
         <Card>
             <CardHeader>
@@ -273,6 +421,20 @@ function handleDelete() {
                                 }}
                             </span>
                         </div>
+                        <div
+                            v-if="metadataEntries(submission.metadata).length > 0"
+                            class="mb-4 flex flex-wrap gap-2"
+                        >
+                            <Badge
+                                v-for="[key, value] in metadataEntries(
+                                    submission.metadata,
+                                )"
+                                :key="key"
+                                variant="outline"
+                            >
+                                {{ key }}: {{ submissionValue(value) }}
+                            </Badge>
+                        </div>
                         <div class="grid gap-2 md:grid-cols-2">
                             <div
                                 v-for="(value, key) in submission.data"
@@ -280,14 +442,10 @@ function handleDelete() {
                                 class="text-sm"
                             >
                                 <span class="font-medium text-muted-foreground"
-                                    >{{ key }}:</span
+                                    >{{ submissionLabel(key) }}:</span
                                 >
                                 <span class="ml-1">
-                                    {{
-                                        Array.isArray(value)
-                                            ? value.join(', ')
-                                            : value || '—'
-                                    }}
+                                    {{ submissionValue(value) }}
                                 </span>
                             </div>
                         </div>
