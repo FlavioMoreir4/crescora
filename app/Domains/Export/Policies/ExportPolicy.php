@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace App\Domains\Export\Policies;
 
-use App\Domains\Export\Models\Export;
 use App\Domains\Shared\Context\TenantContext;
 use App\Domains\Shared\Policies\BasePolicy;
 use App\Models\User;
+use Illuminate\Database\Eloquent\Model;
 
 class ExportPolicy extends BasePolicy
 {
@@ -18,13 +18,13 @@ class ExportPolicy extends BasePolicy
         return $user?->hasPermissionTo('reports.export') ?? false;
     }
 
-    public function view(?User $user, Export $export): bool
+    public function view(?User $user, Model $model): bool
     {
         if (TenantContext::getTeamId() === null) {
             return false;
         }
 
-        if ((int) $export->team_id !== TenantContext::getTeamId()) {
+        if ((int) $model->team_id !== TenantContext::getTeamId()) {
             return false;
         }
 

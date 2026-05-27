@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Domains\Leads\Policies;
 
-use App\Domains\Leads\Models\Lead;
 use App\Domains\Shared\Policies\BasePolicy;
 use App\Models\User;
+use Illuminate\Database\Eloquent\Model;
 
 class LeadPolicy extends BasePolicy
 {
@@ -18,9 +18,9 @@ class LeadPolicy extends BasePolicy
             || $user?->hasPermissionTo('leads.view-own') ?? false;
     }
 
-    public function view(?User $user, Lead $lead): bool
+    public function view(?User $user, Model $model): bool
     {
-        if (! $this->belongsToTeam($lead)) {
+        if (! $this->belongsToTeam($model)) {
             return false;
         }
 
@@ -29,7 +29,7 @@ class LeadPolicy extends BasePolicy
         }
 
         return ($user?->hasPermissionTo('leads.view-own') ?? false)
-            && $this->isOwner($lead, $user);
+            && $this->isOwner($model, $user);
     }
 
     public function create(?User $user): bool
@@ -39,9 +39,9 @@ class LeadPolicy extends BasePolicy
         return $user?->hasPermissionTo('leads.create') ?? false;
     }
 
-    public function update(?User $user, Lead $lead): bool
+    public function update(?User $user, Model $model): bool
     {
-        if (! $this->belongsToTeam($lead)) {
+        if (! $this->belongsToTeam($model)) {
             return false;
         }
 
@@ -50,24 +50,24 @@ class LeadPolicy extends BasePolicy
         }
 
         return ($user?->hasPermissionTo('leads.edit-own') ?? false)
-            && $this->isOwner($lead, $user);
+            && $this->isOwner($model, $user);
     }
 
-    public function delete(?User $user, Lead $lead): bool
+    public function delete(?User $user, Model $model): bool
     {
-        if (! $this->belongsToTeam($lead)) {
+        if (! $this->belongsToTeam($model)) {
             return false;
         }
 
         return $user?->hasPermissionTo('leads.delete') ?? false;
     }
 
-    public function restore(?User $user, Lead $lead): bool
+    public function restore(?User $user, Model $model): bool
     {
         return $this->isAdmin($user);
     }
 
-    public function forceDelete(?User $user, Lead $lead): bool
+    public function forceDelete(?User $user, Model $model): bool
     {
         return $this->isAdmin($user);
     }

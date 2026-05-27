@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\Domains\Units\Policies;
 
 use App\Domains\Shared\Policies\BasePolicy;
-use App\Domains\Units\Models\Unit;
 use App\Models\User;
+use Illuminate\Database\Eloquent\Model;
 
 class UnitPolicy extends BasePolicy
 {
@@ -17,9 +17,9 @@ class UnitPolicy extends BasePolicy
         return true;
     }
 
-    public function view(?User $user, Unit $unit): bool
+    public function view(?User $user, Model $model): bool
     {
-        return $this->belongsToTeam($unit);
+        return $this->belongsToTeam($model);
     }
 
     public function create(?User $user): bool
@@ -29,22 +29,22 @@ class UnitPolicy extends BasePolicy
         return true;
     }
 
-    public function update(?User $user, Unit $unit): bool
+    public function update(?User $user, Model $model): bool
     {
-        return $this->belongsToTeam($unit);
+        return $this->belongsToTeam($model);
     }
 
-    public function delete(?User $user, Unit $unit): bool
+    public function delete(?User $user, Model $model): bool
     {
-        return $this->belongsToTeam($unit);
+        return $this->belongsToTeam($model);
     }
 
-    public function restore(?User $user, Unit $unit): bool
+    public function restore(?User $user, Model $model): bool
     {
-        return $this->belongsToTeam($unit);
+        return $this->belongsToTeam($model);
     }
 
-    public function forceDelete(?User $user, Unit $unit): bool
+    public function forceDelete(?User $user, Model $model): bool
     {
         return false;
     }
